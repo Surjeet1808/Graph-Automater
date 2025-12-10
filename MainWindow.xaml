@@ -1,0 +1,265 @@
+<Window x:Class="GraphSimulator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GraphSimulator"
+        xmlns:utilities="clr-namespace:GraphSimulator.Utilities"
+        xmlns:views="clr-namespace:GraphSimulator.Views"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        mc:Ignorable="d"
+        Title="Graph Simulator" 
+        Height="800" 
+        Width="1400"
+        WindowState="Maximized">
+    
+    <Window.Resources>
+        <utilities:IsNotNullConverter x:Key="IsNotNullConverter" />
+        <utilities:LinkInfoConverter x:Key="LinkInfoConverter" />
+    </Window.Resources>
+    
+    <DockPanel>
+        <!-- Menu Bar -->
+        <Menu DockPanel.Dock="Top" Background="#F5F5F5">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" InputGestureText="Ctrl+N" Command="{Binding NewGraphCommand}"/>
+                <MenuItem Header="_Open" InputGestureText="Ctrl+O" Command="{Binding OpenGraphCommand}"/>
+                <MenuItem Header="_Save" InputGestureText="Ctrl+S" Command="{Binding SaveGraphCommand}"/>
+                <MenuItem Header="Save _As" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveGraphAsCommand}"/>
+                <Separator/>
+                <MenuItem Header="_Export">
+                    <MenuItem Header="_SVG" Command="{Binding ExportSvgCommand}"/>
+                    <MenuItem Header="_PNG" Command="{Binding ExportPngCommand}"/>
+                    <MenuItem Header="_CSV" Command="{Binding ExportCsvCommand}"/>
+                    <MenuItem Header="_JSON" Command="{Binding ExportJsonCommand}"/>
+                    <MenuItem Header="_DOT (Graphviz)" Command="{Binding ExportDotCommand}"/>
+                    <MenuItem Header="_Adjacency Matrix" Command="{Binding ExportAdjacencyMatrixCommand}"/>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="MenuItem_Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}"/>
+                <MenuItem Header="_Redo" InputGestureText="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}"/>
+                <Separator/>
+                <MenuItem Header="_Copy" InputGestureText="Ctrl+C" Command="{Binding CopyNodeCommand}" IsEnabled="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}"/>
+                <MenuItem Header="Cu_t" InputGestureText="Ctrl+X" Command="{Binding CutNodeCommand}" IsEnabled="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}"/>
+                <MenuItem Header="_Paste" InputGestureText="Ctrl+V" Command="{Binding PasteNodeCommand}" IsEnabled="{Binding CanPaste}"/>
+                <Separator/>
+                <MenuItem Header="Select _All" InputGestureText="Ctrl+A"/>
+                <MenuItem Header="_Delete" InputGestureText="Del" Command="{Binding DeleteNodeCommand}" IsEnabled="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Zoom _In" InputGestureText="Ctrl++" Click="MenuItem_ZoomIn_Click"/>
+                <MenuItem Header="Zoom _Out" InputGestureText="Ctrl+-" Click="MenuItem_ZoomOut_Click"/>
+                <MenuItem Header="_Grid" IsCheckable="True" IsChecked="{Binding ShowGrid}"/>
+                <MenuItem Header="Dark _Mode" IsCheckable="True" IsChecked="{Binding IsDarkMode}" Click="MenuItem_DarkMode_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About" Click="MenuItem_About_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#F5F5F5" Margin="0">
+            <Button Margin="8" Padding="8" Command="{Binding NewGraphCommand}" ToolTip="New Graph (Ctrl+N)">New</Button>
+            <Button Margin="8" Padding="8" Command="{Binding OpenGraphCommand}" ToolTip="Open Graph (Ctrl+O)">Open</Button>
+            <Button Margin="8" Padding="8" Command="{Binding SaveGraphCommand}" ToolTip="Save (Ctrl+S)">Save</Button>
+            <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
+            <Button Margin="8" Padding="8" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" ToolTip="{Binding UndoDescription}">Undo</Button>
+            <Button Margin="8" Padding="8" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" ToolTip="{Binding RedoDescription}">Redo</Button>
+            <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
+            <Button Margin="8" Padding="8" Command="{Binding AddNodeCommand}" ToolTip="Add Node">Add Node</Button>
+            <Button Margin="8" Padding="8" Command="{Binding StartLinkCreationCommand}" IsEnabled="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}" ToolTip="Create Link from Selected Node">Create Link</Button>
+            <Button Margin="8" Padding="8" Command="{Binding CancelLinkCreationCommand}" IsEnabled="{Binding IsLinkCreationMode}" ToolTip="Cancel Link Creation">Cancel</Button>
+            <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
+            <Label VerticalAlignment="Center" Margin="8,0">Zoom:</Label>
+            <TextBlock VerticalAlignment="Center" Text="{Binding CanvasZoom}" Margin="0,0,8,0"/>
+            <Button Margin="8" Padding="8" Click="MenuItem_Exit_Click">Start Execution</Button>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <StatusBar DockPanel.Dock="Bottom" Background="#F5F5F5">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding GraphStatistics.TotalNodes}" Margin="0,0,16,0"/>
+                    <TextBlock Text="{Binding GraphStatistics.TotalLinks}" Margin="0,0,16,0"/>
+                    <TextBlock Text="{Binding CanvasZoom}" />
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Main Content -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300" x:Name="SidebarColumn"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Canvas Area -->
+            <Grid Grid.Column="0" Background="White">
+                <views:GraphCanvasControl x:Name="GraphCanvasControl" Background="White" />
+                
+                <!-- Show Sidebar Button (shown when sidebar is hidden) -->
+                <Button x:Name="ShowSidebarButton" 
+                        Content="→" 
+                        Padding="4,0" 
+                        Width="32" 
+                        Height="32" 
+                        HorizontalAlignment="Right" 
+                        VerticalAlignment="Top" 
+                        Margin="8" 
+                        Click="ShowSidebarButton_Click" 
+                        ToolTip="Show sidebar"
+                        Visibility="Collapsed"/>
+                
+                <!-- Floating link toolbar shown when a link is selected -->
+                <Popup x:Name="LinkToolbarPopup" PlacementTarget="{Binding ElementName=GraphCanvasControl}" Placement="Relative" StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="#FFFA" CornerRadius="4" Padding="6" BorderBrush="#CCC" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="LinkToolbar_EditLabel" Content="Edit" Padding="6" Click="LinkToolbar_EditLabel_Click"/>
+                            <Button x:Name="LinkToolbar_Color" Content="Color" Padding="6" Click="LinkToolbar_Color_Click"/>
+                            <Button x:Name="LinkToolbar_Reverse" Content="Reverse" Padding="6" Command="{Binding ReverseLinkCommand}" IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}"/>
+                            <Button x:Name="LinkToolbar_Delete" Content="Delete" Padding="6" Click="LinkToolbar_Delete_Click"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+                <!-- Floating color palette popup (opened from properties panel) -->
+                <Popup x:Name="ColorPalettePopup" Placement="MousePoint" StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="#FFFA" CornerRadius="4" Padding="4" BorderBrush="#CCC" BorderThickness="1">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Tag="#FF0000" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#FF0000" Grid.Row="0" Grid.Column="0"/>
+                            <Button Tag="#00FF00" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#00FF00" Grid.Row="0" Grid.Column="1"/>
+                            <Button Tag="#0000FF" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#0000FF" Grid.Row="0" Grid.Column="2"/>
+                            <Button Tag="#FFFF00" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#FFFF00" Grid.Row="0" Grid.Column="3"/>
+                            <Button Tag="#FF00FF" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#FF00FF" Grid.Row="1" Grid.Column="0"/>
+                            <Button Tag="#00FFFF" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#00FFFF" Grid.Row="1" Grid.Column="1"/>
+                            <Button Tag="#FFA500" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#FFA500" Grid.Row="1" Grid.Column="2"/>
+                            <Button Tag="#A020F0" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#A020F0" Grid.Row="1" Grid.Column="3"/>
+                            <Button Tag="#007ACC" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#007ACC" Grid.Row="2" Grid.Column="0"/>
+                            <Button Tag="#666666" Click="SidebarColor_Click" Width="32" Height="28" Margin="2" Background="#666666" Grid.Row="2" Grid.Column="1"/>
+                        </Grid>
+                    </Border>
+                </Popup>
+            </Grid>
+
+            <!-- Properties Panel - Always visible with toggle button -->
+            <Border Grid.Column="1" Background="#FAFAFA" BorderBrush="#CCCCCC" BorderThickness="1,0,0,0">
+                <DockPanel>
+                    <!-- Toggle Button Header -->
+                    <Border DockPanel.Dock="Top" Background="#F0F0F0" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1" Padding="8">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="SidebarToggleButton" Content="−" Padding="4,0" Width="32" Height="32" Click="SidebarToggle_Click" ToolTip="Toggle sidebar"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" DockPanel.Dock="Bottom">
+                        <StackPanel Margin="16">
+                            <!-- Node Properties -->
+                            <Expander Header="Node Properties" IsExpanded="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}" Margin="0,0,0,16">
+                                <StackPanel Margin="16,8">
+                                    <Label Content="Name:" FontWeight="Bold" Margin="0,8"/>
+                                    <TextBox Text="{Binding SelectedNodeEdit.Name, UpdateSourceTrigger=PropertyChanged}" Padding="8" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
+
+                                    <Label Content="Type:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <ComboBox ItemsSource="{Binding NodeTypes}" SelectedItem="{Binding SelectedNodeEdit.Type}" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8"/>
+
+                                    <Label Content="Color:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="40"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding SelectedNodeEdit.Color}" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8"/>
+                                        <Rectangle Grid.Column="1" Margin="8" Fill="{Binding SelectedNodeEdit.Color}"/>
+                                    </Grid>
+
+                                    <!-- Floating color palette: open via button -->
+                                    <Button x:Name="ColorButton" Content="Choose Color" Click="ColorButton_Click" Margin="0,8,0,0" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" />
+
+                                    <Label Content="JSON Data:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <avalonedit:TextEditor x:Name="JsonEditor" 
+                                                           Height="100" 
+                                                           FontFamily="Courier New" 
+                                                           FontSize="10"
+                                                           IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"
+                                                           Margin="0,0,0,8"/>
+
+                                    <UniformGrid Rows="1" Columns="2" Margin="0,8,0,0">
+                                        <Button Content="Format JSON" Padding="8" Margin="0,0,4,0" Click="JsonEditor_Format_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
+                                        <Button Content="Validate JSON" Padding="8" Click="JsonEditor_Validate_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
+                                    </UniformGrid>
+
+                                    <UniformGrid Rows="1" Columns="2" Margin="0,4,0,0">
+                                        <Button Content="Save" Command="{Binding SaveNodePropertiesCommand}" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" Margin="0,0,4,0" Background="#4CAF50" Foreground="White"/>
+                                        <Button Content="Cancel" Click="NodeProperties_Cancel_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- Link Properties -->
+                            <Expander Header="Link Properties" IsExpanded="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}" Margin="0,0,0,16">
+                                <StackPanel Margin="16,8">
+                                    <!-- Link Info Display -->
+                                    <Label Content="Connection:" FontWeight="Bold" Margin="0,8"/>
+                                    <TextBox Padding="8" IsReadOnly="True" Background="#E3F2FD" Foreground="#1976D2"
+                                             IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}">
+                                        <TextBox.Text>
+                                            <MultiBinding Converter="{StaticResource LinkInfoConverter}" Mode="OneWay">
+                                                <Binding Path="SelectedLink" Mode="OneWay"/>
+                                                <Binding Path="CurrentGraph.Nodes" Mode="OneWay"/>
+                                            </MultiBinding>
+                                        </TextBox.Text>
+                                    </TextBox>
+
+                                    <Label Content="Label:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <TextBox Text="{Binding SelectedLink.Label, UpdateSourceTrigger=PropertyChanged}" Padding="8" IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}"/>
+
+                                    <Label Content="Weight:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <TextBox Text="{Binding SelectedLink.Weight}" IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}" Padding="8"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <Button Content="Save" Command="{Binding SaveLinkCommand}" IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}" Padding="8" Margin="0,0,8,0" Width="70"/>
+                                        <Button Content="Delete" Command="{Binding DeleteLinkCommand}" IsEnabled="{Binding SelectedLink, Converter={StaticResource IsNotNullConverter}}" Padding="8" Width="70"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- Graph Statistics - Always Visible -->
+                            <Expander Header="Graph Statistics" IsExpanded="True" Margin="0,0,0,16">
+                                <StackPanel Margin="16,8">
+                                    <StackPanel Margin="0,8">
+                                        <TextBlock Text="Total Nodes:" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding GraphStatistics.TotalNodes}" Margin="0,4"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,8">
+                                        <TextBlock Text="Total Links:" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding GraphStatistics.TotalLinks}" Margin="0,4"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,8">
+                                        <TextBlock Text="Orphaned Nodes:" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding GraphStatistics.OrphanedNodes}" Margin="0,4"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
