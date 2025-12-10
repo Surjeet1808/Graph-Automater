@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GraphSimulator")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1ee99515edfbe0974e8cd7ae0243ef1d76581a58")]
 [assembly: System.Reflection.AssemblyProductAttribute("GraphSimulator")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GraphSimulator")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
