@@ -75,6 +75,9 @@
             <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
             <Button Margin="8" Padding="8" Command="{Binding StartExecutionCommand}" ToolTip="Execute graph operations in sequence" Background="#4CAF50" Foreground="White" FontWeight="Bold">▶ Start Execution</Button>
             <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
+            <CheckBox x:Name="ShowMousePositionCheckBox" Content="Show Mouse Position" VerticalAlignment="Center" Margin="8,0" Checked="ShowMousePosition_Checked" Unchecked="ShowMousePosition_Unchecked" ToolTip="Display real-time mouse coordinates"/>
+            <TextBlock x:Name="MousePositionText" VerticalAlignment="Center" Margin="8,0" Foreground="#007ACC" FontWeight="Bold" Text="X: 0, Y: 0" Visibility="Collapsed"/>
+            <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
             <Label VerticalAlignment="Center" Margin="8,0">Zoom:</Label>
             <TextBlock VerticalAlignment="Center" Text="{Binding CanvasZoom}" Margin="0,0,8,0"/>
         </StackPanel>
@@ -83,6 +86,7 @@
         <StatusBar DockPanel.Dock="Bottom" Background="#F5F5F5">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <StackPanel Orientation="Horizontal">
@@ -238,6 +242,32 @@
                                                          AcceptsReturn="True" 
                                                          VerticalScrollBarVisibility="Auto"
                                                          FontFamily="Courier New"/>
+                                            </StackPanel>
+
+                                            <!-- Graph Operation -->
+                                            <StackPanel x:Name="GraphFields" Visibility="Collapsed">
+                                                <Label Content="Graph File:" Margin="0,4,0,2"/>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" 
+                                                             Text="{Binding SelectedNodeEdit.GraphFilePath, UpdateSourceTrigger=PropertyChanged}" 
+                                                             Padding="6" 
+                                                             IsReadOnly="True"
+                                                             Background="#F5F5F5"/>
+                                                    <Button Grid.Column="1" 
+                                                            Content="Browse..." 
+                                                            Click="BrowseGraphFile_Click"
+                                                            Padding="10,6"
+                                                            Margin="4,0,0,0"/>
+                                                </Grid>
+                                                <TextBlock x:Name="GraphValidationMessage" 
+                                                           Text="" 
+                                                           FontSize="10" 
+                                                           Foreground="Green" 
+                                                           Margin="0,4,0,0"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>

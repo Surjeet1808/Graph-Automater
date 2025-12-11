@@ -63,7 +63,8 @@ namespace GraphSimulator.Models
             "key_up",
             "type_text",
             "wait",
-            "custom_code"
+            "custom_code",
+            "graph"
         };
 
         /// <summary>
@@ -81,7 +82,8 @@ namespace GraphSimulator.Models
     { "key_up",            "#8B3A3A" }, // dark crimson - key up
     { "type_text",         "#6B4423" }, // dark brown/amber - text input
     { "wait",              "#3E2A5C" }, // dark purple - wait/delay
-    { "custom_code",       "#2C3338" }  // dark grey - custom code
+    { "custom_code",       "#2C3338" }, // dark grey - custom code
+    { "graph",             "#2A475E" }  // dark teal - sub-graph execution
 };
 
 

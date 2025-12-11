@@ -653,12 +653,26 @@ namespace GraphSimulator.ViewModels
         /// </summary>
         private void ReinitializeNodePorts(Node node)
         {
+            // If ports collection is null or empty, initialize it
+            if (node.Ports == null)
+            {
+                node.Ports = new ObservableCollection<Port>();
+            }
+            
             if (node.Ports.Count == 0)
             {
                 node.Ports.Add(new Port { NodeId = node.Id, Position = PortPosition.Top });
                 node.Ports.Add(new Port { NodeId = node.Id, Position = PortPosition.Right });
                 node.Ports.Add(new Port { NodeId = node.Id, Position = PortPosition.Bottom });
                 node.Ports.Add(new Port { NodeId = node.Id, Position = PortPosition.Left });
+            }
+            else
+            {
+                // Ports exist from saved file, just ensure they have the correct NodeId
+                foreach (var port in node.Ports)
+                {
+                    port.NodeId = node.Id;
+                }
             }
         }
 

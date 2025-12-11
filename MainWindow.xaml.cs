@@ -1,5 +1,6 @@
 using GraphSimulator.ViewModels;
 using GraphSimulator.Models;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,6 +17,9 @@ namespace GraphSimulator
     {
         private MainViewModel? _viewModel;
         private Execute _executor = new Execute();
+        private System.Windows.Threading.DispatcherTimer? _mousePositionTimer;
+        private bool _isTrackingMousePosition = false;
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -25,6 +29,9 @@ namespace GraphSimulator
 
             // Subscribe to execution event
             _viewModel.ExecutionRequested += OnExecutionRequested;
+            
+            // Initialize mouse position timer
+            InitializeMousePositionTracking();
 
             // Render the initial graph on the canvas control
             try
@@ -801,6 +808,7 @@ namespace GraphSimulator
             TypeTextFields.Visibility = Visibility.Collapsed;
             WaitOperationFields.Visibility = Visibility.Collapsed;
             CustomCodeFields.Visibility = Visibility.Collapsed;
+            GraphFields.Visibility = Visibility.Collapsed;
 
             // Show relevant fields based on operation type
             switch (operationType?.ToLower())
@@ -827,6 +835,9 @@ namespace GraphSimulator
                     break;
                 case "custom_code":
                     CustomCodeFields.Visibility = Visibility.Visible;
+                    break;
+                case "graph":
+                    GraphFields.Visibility = Visibility.Visible;
                     break;
             }
         }
@@ -901,5 +912,158 @@ namespace GraphSimulator
             // Hide the show sidebar button
             ShowSidebarButton.Visibility = Visibility.Collapsed;
         }
+
+        #region Mouse Position Tracking
+
+        /// <summary>
+        /// Initializes the mouse position tracking timer
+        /// </summary>
+        private void InitializeMousePositionTracking()
+        {
+            _mousePositionTimer = new System.Windows.Threading.DispatcherTimer();
+            _mousePositionTimer.Interval = TimeSpan.FromMilliseconds(50); // Update 20 times per second
+            _mousePositionTimer.Tick += MousePositionTimer_Tick;
+        }
+
+        /// <summary>
+        /// Event handler for when the Show Mouse Position checkbox is checked
+        /// </summary>
+        private void ShowMousePosition_Checked(object sender, RoutedEventArgs e)
+        {
+            _isTrackingMousePosition = true;
+            MousePositionText.Visibility = Visibility.Visible;
+            
+            if (_mousePositionTimer != null)
+            {
+                _mousePositionTimer.Start();
+            }
+            
+            if (_viewModel != null)
+            {
+                _viewModel.StatusMessage = "Mouse position tracking enabled";
+            }
+        }
+
+        /// <summary>
+        /// Event handler for when the Show Mouse Position checkbox is unchecked
+        /// </summary>
+        private void ShowMousePosition_Unchecked(object sender, RoutedEventArgs e)
+        {
+            _isTrackingMousePosition = false;
+            MousePositionText.Visibility = Visibility.Collapsed;
+            
+            if (_mousePositionTimer != null)
+            {
+                _mousePositionTimer.Stop();
+            }
+            
+            if (_viewModel != null)
+            {
+                _viewModel.StatusMessage = "Mouse position tracking disabled";
+            }
+        }
+
+        /// <summary>
+        /// Timer tick event to update mouse position display
+        /// </summary>
+        private void MousePositionTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!_isTrackingMousePosition)
+                return;
+
+            try
+            {
+                // Get mouse position relative to screen using WPF
+                var screenPoint = PointToScreen(Mouse.GetPosition(this));
+                
+                // Update the display
+                MousePositionText.Text = $"Screen X: {(int)screenPoint.X}, Y: {(int)screenPoint.Y}";
+            }
+            catch
+            {
+                // Ignore any errors in getting mouse position
+            }
+        }
+
+        /// <summary>
+        /// Handles Browse button click to select a graph file
+        /// </summary>
+        private void BrowseGraphFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel?.SelectedNodeEdit == null)
+                return;
+
+            try
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Filter = "Graph Files (*.json)|*.json|All Files (*.*)|*.*",
+                    Title = "Select Graph File to Execute"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    // Validate the selected graph file
+                    if (ValidateGraphFile(dialog.FileName))
+                    {
+                        _viewModel.SelectedNodeEdit.GraphFilePath = dialog.FileName;
+                        GraphValidationMessage.Text = "✓ Valid graph file selected";
+                        GraphValidationMessage.Foreground = new SolidColorBrush(Colors.Green);
+                    }
+                    else
+                    {
+                        GraphValidationMessage.Text = "✗ Invalid or unexecutable graph file";
+                        GraphValidationMessage.Foreground = new SolidColorBrush(Colors.Red);
+                        _viewModel.SelectedNodeEdit.GraphFilePath = "";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error selecting graph file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Validates if a graph file is valid and executable
+        /// </summary>
+        private bool ValidateGraphFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+                return false;
+
+            try
+            {
+                // Try to load and parse the graph
+                var fileService = new GraphSimulator.Services.FileService();
+                var task = fileService.LoadGraphAsync(filePath);
+                task.Wait(); // Wait for async operation to complete
+                var graph = task.Result;
+
+                if (graph == null || graph.Nodes.Count == 0)
+                    return false;
+
+                // Check if graph has at least one valid operation node
+                bool hasValidOperations = false;
+                foreach (var node in graph.Nodes)
+                {
+                    if (!string.IsNullOrEmpty(node.Type) && 
+                        Graph.DefaultNodeTypes.Contains(node.Type.ToLower()) &&
+                        node.Type.ToLower() != "graph") // Prevent circular graph references
+                    {
+                        hasValidOperations = true;
+                        break;
+                    }
+                }
+
+                return hasValidOperations;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
     }
 }

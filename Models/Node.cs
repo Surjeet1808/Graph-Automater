@@ -17,7 +17,7 @@ namespace GraphSimulator.Models
         private string name = "New Node";
 
         [ObservableProperty]
-        private string type = "Process";
+        private string type = "mouse_left_click";
 
         [ObservableProperty]
         private double x = 0;
@@ -35,7 +35,7 @@ namespace GraphSimulator.Models
         private string jsonData = "{}";
 
         [ObservableProperty]
-        private string color = "#007ACC";
+        private string color = "#1E3A5F"; // Default color for mouse_left_click
 
         [ObservableProperty]
         private bool isSelected = false;
@@ -58,8 +58,7 @@ namespace GraphSimulator.Models
         /// <summary>
         /// Collection of ports on this node (4 ports: top, right, bottom, left)
         /// </summary>
-        [JsonIgnore]
-        public ObservableCollection<Port> Ports { get; } = new();
+        public ObservableCollection<Port> Ports { get; set; } = new();
 
         public Node()
         {

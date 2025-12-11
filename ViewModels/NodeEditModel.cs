@@ -21,13 +21,16 @@ namespace GraphSimulator.ViewModels
                     // Update color based on the new type
                     Color = Models.Graph.GetColorForNodeType(value);
                     
+                    // Update name based on the new type
+                    Name = FormatOperationTypeName(value);
+                    
                     // Update JSON data when type changes
                     UpdateJsonDataForType();
                 }
             } 
         }
 
-        private string color = "#007ACC";
+        private string color = Models.Graph.GetColorForNodeType("mouse_left_click");
         public string Color { get => color; set => SetProperty(ref color, value); }
 
         private string jsonData = "{}";
@@ -76,6 +79,9 @@ namespace GraphSimulator.ViewModels
         private string description = "";
         public string Description { get => description; set { SetProperty(ref description, value); UpdateJsonData(); } }
 
+        private string graphFilePath = "";
+        public string GraphFilePath { get => graphFilePath; set { SetProperty(ref graphFilePath, value); UpdateJsonData(); } }
+
         private bool isUpdatingFromJson = false;
 
         private void UpdateJsonDataForType()
@@ -109,9 +115,28 @@ namespace GraphSimulator.ViewModels
                 case "custom_code":
                     CustomCode = "// Your custom code here";
                     break;
+                case "graph":
+                    GraphFilePath = "";
+                    break;
             }
 
             UpdateJsonData();
+        }
+
+        /// <summary>
+        /// Formats operation type name by replacing underscores with spaces and capitalizing
+        /// </summary>
+        private string FormatOperationTypeName(string type)
+        {
+            if (string.IsNullOrEmpty(type))
+                return "New Node";
+            
+            // Replace underscores with spaces and capitalize each word
+            var words = type.Split('_');
+            var formattedWords = words.Select(w => 
+                string.IsNullOrEmpty(w) ? "" : char.ToUpper(w[0]) + w.Substring(1).ToLower()
+            );
+            return string.Join(" ", formattedWords);
         }
 
         private void UpdateJsonData()
@@ -126,6 +151,7 @@ namespace GraphSimulator.ViewModels
                     IntValues = GetIntValuesForType(),
                     StringValues = GetStringValuesForType(),
                     CustomCode = string.IsNullOrEmpty(customCode) ? null : customCode,
+                    GraphFilePath = string.IsNullOrEmpty(graphFilePath) ? null : graphFilePath,
                     Priority = priority,
                     DelayBefore = delayBefore,
                     DelayAfter = delayAfter,
@@ -239,6 +265,11 @@ namespace GraphSimulator.ViewModels
                     customCode = customCodeElement.GetString() ?? "";
                 }
 
+                if (root.TryGetProperty("GraphFilePath", out var graphFilePathElement))
+                {
+                    graphFilePath = graphFilePathElement.GetString() ?? "";
+                }
+
                 if (root.TryGetProperty("Priority", out var priorityElement))
                 {
                     priority = priorityElement.GetInt32();
@@ -271,6 +302,7 @@ namespace GraphSimulator.ViewModels
                 OnPropertyChanged(nameof(TextToType));
                 OnPropertyChanged(nameof(WaitDuration));
                 OnPropertyChanged(nameof(CustomCode));
+                OnPropertyChanged(nameof(GraphFilePath));
                 OnPropertyChanged(nameof(DelayBefore));
                 OnPropertyChanged(nameof(DelayAfter));
                 OnPropertyChanged(nameof(Priority));
