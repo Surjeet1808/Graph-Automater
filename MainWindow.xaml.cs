@@ -687,18 +687,6 @@ namespace GraphSimulator
 
             return operations;
         }
-                        }
-                    }
-                }
-                catch
-                {
-                    // Skip nodes with invalid JSON
-                    continue;
-                }
-            }
-
-            return operations;
-        }
 
         private void MenuItem_About_Click(object sender, RoutedEventArgs e)
         {
