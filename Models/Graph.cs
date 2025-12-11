@@ -53,6 +53,7 @@ namespace GraphSimulator.Models
         /// </summary>
         public static readonly string[] DefaultNodeTypes = 
         {
+            "start",
             "mouse_left_click",
             "mouse_right_click",
             "mouse_move",
@@ -72,6 +73,7 @@ namespace GraphSimulator.Models
         /// </summary>
     private static readonly System.Collections.Generic.Dictionary<string, string> NodeTypeColors = new()
 {
+    { "start",             "#0F4C2E" }, // dark emerald green - start node
     { "mouse_left_click",  "#1E3A5F" }, // dark navy blue - primary mouse action
     { "mouse_right_click", "#0D2741" }, // very dark blue - secondary mouse action
     { "mouse_move",        "#2B4F7C" }, // dark steel blue - mouse movement

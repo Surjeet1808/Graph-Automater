@@ -610,7 +610,7 @@ namespace GraphSimulator
         }
 
         /// <summary>
-        /// Parses graph nodes to extract operation definitions
+        /// Parses graph nodes to extract operation definitions following link flow from start node
         /// </summary>
         private List<OperationModel> ParseGraphOperations()
         {
@@ -619,35 +619,74 @@ namespace GraphSimulator
             if (_viewModel?.CurrentGraph?.Nodes == null)
                 return operations;
 
-            // Sort nodes by their position or a sequence number if available
-            var sortedNodes = _viewModel.CurrentGraph.Nodes
-                .OrderBy(n => n.Y)
-                .ThenBy(n => n.X)
-                .ToList();
-
-            int priority = 1;
-            foreach (var node in sortedNodes)
+            // Find the start node
+            var startNode = _viewModel.CurrentGraph.Nodes.FirstOrDefault(n => n.Type?.ToLower() == "start");
+            
+            if (startNode == null)
             {
-                try
+                throw new InvalidOperationException(
+                    "⚠️ NO START NODE FOUND\n\n" +
+                    "The graph must contain exactly one 'start' node.\n\n" +
+                    "Please add a start node to define where execution should begin.");
+            }
+
+            // Traverse from start node following outgoing links
+            var visitedNodes = new HashSet<Guid>();
+            var currentNode = startNode;
+            int priority = 1;
+
+            while (currentNode != null)
+            {
+                visitedNodes.Add(currentNode.Id);
+
+                // Skip start node itself - it's just a marker
+                if (currentNode.Type?.ToLower() != "start")
                 {
-                    // Try to parse JSON data from node
-                    if (!string.IsNullOrWhiteSpace(node.JsonData))
+                    try
                     {
-                        var operation = System.Text.Json.JsonSerializer.Deserialize<OperationModel>(
-                            node.JsonData,
-                            new System.Text.Json.JsonSerializerOptions 
-                            { 
-                                PropertyNameCaseInsensitive = true 
-                            }
-                        );
-
-                        if (operation != null && !string.IsNullOrEmpty(operation.Type))
+                        // Parse JSON data from node
+                        if (!string.IsNullOrWhiteSpace(currentNode.JsonData))
                         {
-                            // Set priority based on node order if not specified
-                            if (operation.Priority == 0)
-                                operation.Priority = priority++;
+                            var operation = System.Text.Json.JsonSerializer.Deserialize<OperationModel>(
+                                currentNode.JsonData,
+                                new System.Text.Json.JsonSerializerOptions 
+                                { 
+                                    PropertyNameCaseInsensitive = true 
+                                }
+                            );
 
-                            operations.Add(operation);
+                            if (operation != null && !string.IsNullOrEmpty(operation.Type))
+                            {
+                                // Set priority based on traversal order
+                                operation.Priority = priority++;
+                                operations.Add(operation);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException(
+                            $"❌ Failed to parse node '{currentNode.Name}'\n\n" +
+                            $"Error: {ex.Message}");
+                    }
+                }
+
+                // Find the next node by following outgoing link
+                var outgoingLink = _viewModel.CurrentGraph.Links.FirstOrDefault(l => l.SourceNodeId == currentNode.Id);
+                
+                if (outgoingLink != null)
+                {
+                    currentNode = _viewModel.CurrentGraph.Nodes.FirstOrDefault(n => n.Id == outgoingLink.TargetNodeId);
+                }
+                else
+                {
+                    // No outgoing link - end of chain
+                    break;
+                }
+            }
+
+            return operations;
+        }
                         }
                     }
                 }
@@ -875,6 +914,9 @@ namespace GraphSimulator
             // Show relevant fields based on operation type
             switch (operationType?.ToLower())
             {
+                case "start":
+                    // Start node has no operation-specific fields
+                    break;
                 case "mouse_left_click":
                 case "mouse_right_click":
                 case "mouse_move":
@@ -1068,6 +1110,11 @@ namespace GraphSimulator
                 {
                     // Store the path immediately without validation
                     _viewModel.SelectedNodeEdit.GraphFilePath = dialog.FileName;
+                    
+                    // Set the node name to the selected graph filename (without extension)
+                    string graphFileName = System.IO.Path.GetFileNameWithoutExtension(dialog.FileName);
+                    _viewModel.SelectedNodeEdit.Name = graphFileName;
+                    
                     GraphValidationMessage.Text = $"📄 Selected: {System.IO.Path.GetFileName(dialog.FileName)}";
                     GraphValidationMessage.Foreground = new SolidColorBrush(Colors.Blue);
                 }

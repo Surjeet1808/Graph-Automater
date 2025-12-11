@@ -129,6 +129,10 @@ namespace GraphSimulator.Execution.Controller
                         await ExecuteGraphOperationAsync(operation);
                         break;
 
+                    case "start":
+                        // Start node is just a marker - do nothing
+                        break;
+
                     case "custom_code":
                         if (string.IsNullOrEmpty(operation.CustomCode))
                         {

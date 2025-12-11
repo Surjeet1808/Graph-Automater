@@ -100,6 +100,9 @@ namespace GraphSimulator.ViewModels
             // Set default values based on type
             switch (type.ToLower())
             {
+                case "start":
+                    // Start node doesn't need operation data
+                    break;
                 case "mouse_left_click":
                 case "mouse_right_click":
                 case "mouse_move":
