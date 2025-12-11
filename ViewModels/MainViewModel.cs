@@ -105,12 +105,16 @@ namespace GraphSimulator.ViewModels
             SelectedNodeEdit = new NodeEditModel
             {
                 Name = value.Name,
-                Type = value.Type,
-                Color = value.Color,
-                JsonData = value.JsonData,
                 Width = value.Width,
-                Height = value.Height
+                Height = value.Height,
+                JsonData = value.JsonData
             };
+            
+            // Set type which will automatically update the color
+            SelectedNodeEdit.Type = value.Type;
+            
+            // Load operation-specific properties from JSON
+            SelectedNodeEdit.LoadFromJsonData(value.JsonData);
         }
 
         private readonly System.Timers.Timer _autoSaveTimer;
@@ -154,11 +158,12 @@ namespace GraphSimulator.ViewModels
         [RelayCommand]
         public void AddNode(string? nodeType = null)
         {
-            nodeType ??= "Process";
+            nodeType ??= "mouse_left_click";
             var node = new Node 
             { 
                 Type = nodeType,
-                Color = Graph.GetColorForNodeType(nodeType)
+                Color = Graph.GetColorForNodeType(nodeType),
+                JsonData = GetDefaultJsonForType(nodeType)
             };
             
             var command = new AddNodeCommand(CurrentGraph, node);
@@ -174,11 +179,12 @@ namespace GraphSimulator.ViewModels
         [RelayCommand]
         public void AddNodeAt(Point position)
         {
-            var nodeType = "Process";
+            var nodeType = "mouse_left_click";
             var node = new Node
             {
                 Type = nodeType,
-                Color = Graph.GetColorForNodeType(nodeType)
+                Color = Graph.GetColorForNodeType(nodeType),
+                JsonData = GetDefaultJsonForType(nodeType)
             };
 
             // Center the node at the clicked position
@@ -201,6 +207,50 @@ namespace GraphSimulator.ViewModels
 
             StatusMessage = $"Node '{node.Name}' added";
             UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Gets default JSON data for an operation type
+        /// </summary>
+        private string GetDefaultJsonForType(string type)
+        {
+            var operation = new
+            {
+                Type = type,
+                IntValues = GetDefaultIntValues(type),
+                StringValues = GetDefaultStringValues(type),
+                Priority = 0,
+                DelayBefore = 0,
+                DelayAfter = 0,
+                Enabled = true
+            };
+
+            return System.Text.Json.JsonSerializer.Serialize(operation, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+        }
+
+        private int[] GetDefaultIntValues(string type)
+        {
+            return type.ToLower() switch
+            {
+                "mouse_left_click" or "mouse_right_click" or "mouse_move" => new[] { 100, 100 },
+                "scroll_up" or "scroll_down" => new[] { 120 },
+                "key_press" or "key_down" or "key_up" => new[] { 13 },
+                "wait" => new[] { 1000 },
+                _ => Array.Empty<int>()
+            };
+        }
+
+        private string[] GetDefaultStringValues(string type)
+        {
+            return type.ToLower() switch
+            {
+                "type_text" => new[] { "Hello World" },
+                _ => Array.Empty<string>()
+            };
         }
 
         /// <summary>
@@ -869,6 +919,22 @@ namespace GraphSimulator.ViewModels
 
             StatusMessage = $"Node '{newNode.Name}' pasted";
             UpdateStatistics();
+        }
+
+        /// <summary>
+        /// Event that fires when execution is requested
+        /// The MainWindow will handle the actual execution logic
+        /// </summary>
+        public event EventHandler? ExecutionRequested;
+
+        /// <summary>
+        /// Command to start execution
+        /// </summary>
+        [RelayCommand]
+        public void StartExecution()
+        {
+            StatusMessage = "Starting execution...";
+            ExecutionRequested?.Invoke(this, EventArgs.Empty);
         }
 
         /// <summary>

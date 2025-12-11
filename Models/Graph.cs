@@ -49,20 +49,21 @@ namespace GraphSimulator.Models
         public ObservableCollection<Link> Links { get; } = new();
 
         /// <summary>
-        /// Predefined node types
+        /// Predefined node types - Based on operation types from Execute.cs
         /// </summary>
         public static readonly string[] DefaultNodeTypes = 
         {
-            "Process",
-            "Data",
-            "Decision",
-            "Start",
-            "End",
-            "Input",
-            "Output",
-            "Database",
-            "Document",
-            "Custom"
+            "mouse_left_click",
+            "mouse_right_click",
+            "mouse_move",
+            "scroll_up",
+            "scroll_down",
+            "key_press",
+            "key_down",
+            "key_up",
+            "type_text",
+            "wait",
+            "custom_code"
         };
 
         /// <summary>
@@ -70,16 +71,17 @@ namespace GraphSimulator.Models
         /// </summary>
     private static readonly System.Collections.Generic.Dictionary<string, string> NodeTypeColors = new()
 {
-    { "Process",  "#3A76C3" }, // deep blue
-    { "Data",     "#1F5A8B" }, // darker steel-blue
-    { "Decision", "#C15A4A" }, // muted red / brick
-    { "Start",    "#2AA878" }, // teal-green
-    { "End",      "#B03E3E" }, // darker red
-    { "Input",    "#B37E29" }, // warm golden / amber-brown
-    { "Output",   "#7D5FB5" }, // medium desaturated purple
-    { "Database", "#2E3B46" }, // slate-grey / almost muted navy
-    { "Document", "#3F6FA8" }, // slightly desaturated blue
-    { "Custom",   "#6E777E" }  // neutral grey-blue
+    { "mouse_left_click",  "#1E3A5F" }, // dark navy blue - primary mouse action
+    { "mouse_right_click", "#0D2741" }, // very dark blue - secondary mouse action
+    { "mouse_move",        "#2B4F7C" }, // dark steel blue - mouse movement
+    { "scroll_up",         "#2D5016" }, // dark forest green - scroll up
+    { "scroll_down",       "#1F3A0F" }, // very dark green - scroll down
+    { "key_press",         "#7A2E2E" }, // dark brick red - key action
+    { "key_down",          "#5A1F1F" }, // very dark red - key down
+    { "key_up",            "#8B3A3A" }, // dark crimson - key up
+    { "type_text",         "#6B4423" }, // dark brown/amber - text input
+    { "wait",              "#3E2A5C" }, // dark purple - wait/delay
+    { "custom_code",       "#2C3338" }  // dark grey - custom code
 };
 
 

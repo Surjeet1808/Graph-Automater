@@ -73,9 +73,10 @@
             <Button Margin="8" Padding="8" Command="{Binding StartLinkCreationCommand}" IsEnabled="{Binding SelectedNode, Converter={StaticResource IsNotNullConverter}}" ToolTip="Create Link from Selected Node">Create Link</Button>
             <Button Margin="8" Padding="8" Command="{Binding CancelLinkCreationCommand}" IsEnabled="{Binding IsLinkCreationMode}" ToolTip="Cancel Link Creation">Cancel</Button>
             <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
+            <Button Margin="8" Padding="8" Command="{Binding StartExecutionCommand}" ToolTip="Execute graph operations in sequence" Background="#4CAF50" Foreground="White" FontWeight="Bold">▶ Start Execution</Button>
+            <Separator Margin="4,0" Width="1" Background="#CCCCCC"/>
             <Label VerticalAlignment="Center" Margin="8,0">Zoom:</Label>
             <TextBlock VerticalAlignment="Center" Text="{Binding CanvasZoom}" Margin="0,0,8,0"/>
-            <Button Margin="8" Padding="8" Click="MenuItem_Exit_Click">Start Execution</Button>
         </StackPanel>
 
         <!-- Status Bar -->
@@ -175,7 +176,7 @@
                                     <Label Content="Name:" FontWeight="Bold" Margin="0,8"/>
                                     <TextBox Text="{Binding SelectedNodeEdit.Name, UpdateSourceTrigger=PropertyChanged}" Padding="8" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
 
-                                    <Label Content="Type:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <Label Content="Operation Type:" FontWeight="Bold" Margin="0,16,0,8"/>
                                     <ComboBox ItemsSource="{Binding NodeTypes}" SelectedItem="{Binding SelectedNodeEdit.Type}" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8"/>
 
                                     <Label Content="Color:" FontWeight="Bold" Margin="0,16,0,8"/>
@@ -191,20 +192,103 @@
                                     <!-- Floating color palette: open via button -->
                                     <Button x:Name="ColorButton" Content="Choose Color" Click="ColorButton_Click" Margin="0,8,0,0" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" />
 
-                                    <Label Content="JSON Data:" FontWeight="Bold" Margin="0,16,0,8"/>
+                                    <!-- Dynamic Operation-Specific Fields -->
+                                    <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,16,0,0" Background="#F9F9F9">
+                                        <StackPanel>
+                                            <TextBlock Text="Operation Parameters" FontWeight="Bold" FontSize="12" Margin="0,0,0,8"/>
+                                            
+                                            <!-- Mouse Click/Move Operations -->
+                                            <StackPanel x:Name="MouseOperationFields" Visibility="Collapsed">
+                                                <Label Content="X Coordinate:" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.XCoordinate, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                <Label Content="Y Coordinate:" Margin="0,8,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.YCoordinate, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                            </StackPanel>
+
+                                            <!-- Scroll Operations -->
+                                            <StackPanel x:Name="ScrollOperationFields" Visibility="Collapsed">
+                                                <Label Content="Scroll Amount:" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.ScrollAmount, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                <TextBlock Text="(Default: 120 pixels)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- Key Operations -->
+                                            <StackPanel x:Name="KeyOperationFields" Visibility="Collapsed">
+                                                <Label Content="Key Code:" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.KeyCode, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                <TextBlock Text="(e.g., 13=Enter, 32=Space, 65-90=A-Z)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- Type Text Operation -->
+                                            <StackPanel x:Name="TypeTextFields" Visibility="Collapsed">
+                                                <Label Content="Text to Type:" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.TextToType, UpdateSourceTrigger=PropertyChanged}" Padding="6" AcceptsReturn="False"/>
+                                            </StackPanel>
+
+                                            <!-- Wait Operation -->
+                                            <StackPanel x:Name="WaitOperationFields" Visibility="Collapsed">
+                                                <Label Content="Wait Duration (ms):" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.WaitDuration, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                <TextBlock Text="(1000 ms = 1 second)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- Custom Code Operation -->
+                                            <StackPanel x:Name="CustomCodeFields" Visibility="Collapsed">
+                                                <Label Content="Custom Code:" Margin="0,4,0,2"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.CustomCode, UpdateSourceTrigger=PropertyChanged}" 
+                                                         Padding="6" 
+                                                         Height="80" 
+                                                         AcceptsReturn="True" 
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         FontFamily="Courier New"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Common Properties -->
+                                    <Border BorderBrush="#CCCCCC" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,12,0,0" Background="#F9F9F9">
+                                        <StackPanel>
+                                            <TextBlock Text="Execution Settings" FontWeight="Bold" FontSize="12" Margin="0,0,0,8"/>
+                                            
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <StackPanel Grid.Column="0" Margin="0,0,4,0">
+                                                    <Label Content="Delay Before (ms):" Margin="0,4,0,2"/>
+                                                    <TextBox Text="{Binding SelectedNodeEdit.DelayBefore, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                </StackPanel>
+                                                
+                                                <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                                                    <Label Content="Delay After (ms):" Margin="0,4,0,2"/>
+                                                    <TextBox Text="{Binding SelectedNodeEdit.DelayAfter, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <Label Content="Priority:" Margin="0,8,0,2"/>
+                                            <TextBox Text="{Binding SelectedNodeEdit.Priority, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+                                            <TextBlock Text="(Lower value = higher priority)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
+
+                                            <Label Content="Description:" Margin="0,8,0,2"/>
+                                            <TextBox Text="{Binding SelectedNodeEdit.Description, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>
+
+                                            <CheckBox Content="Enabled" IsChecked="{Binding SelectedNodeEdit.Enabled}" Margin="0,8,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Label Content="Generated JSON:" FontWeight="Bold" Margin="0,16,0,8"/>
                                     <avalonedit:TextEditor x:Name="JsonEditor" 
-                                                           Height="100" 
+                                                           Height="120" 
                                                            FontFamily="Courier New" 
                                                            FontSize="10"
                                                            IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"
-                                                           Margin="0,0,0,8"/>
+                                                           IsReadOnly="True"
+                                                           Margin="0,0,0,8"
+                                                           Background="#F5F5F5"/>
 
                                     <UniformGrid Rows="1" Columns="2" Margin="0,8,0,0">
-                                        <Button Content="Format JSON" Padding="8" Margin="0,0,4,0" Click="JsonEditor_Format_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
-                                        <Button Content="Validate JSON" Padding="8" Click="JsonEditor_Validate_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}"/>
-                                    </UniformGrid>
-
-                                    <UniformGrid Rows="1" Columns="2" Margin="0,4,0,0">
                                         <Button Content="Save" Command="{Binding SaveNodePropertiesCommand}" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" Margin="0,0,4,0" Background="#4CAF50" Foreground="White"/>
                                         <Button Content="Cancel" Click="NodeProperties_Cancel_Click" IsEnabled="{Binding SelectedNodeEdit, Converter={StaticResource IsNotNullConverter}}" Padding="8" />
                                     </UniformGrid>

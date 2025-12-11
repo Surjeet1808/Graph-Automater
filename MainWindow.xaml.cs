@@ -23,6 +23,9 @@ namespace GraphSimulator
             _viewModel = new GraphSimulator.ViewModels.MainViewModel();
             DataContext = _viewModel;
 
+            // Subscribe to execution event
+            _viewModel.ExecutionRequested += OnExecutionRequested;
+
             // Render the initial graph on the canvas control
             try
             {
@@ -487,6 +490,108 @@ namespace GraphSimulator
             
             await _executor.ExecuteOperationsAsync(manualOps);
         }
+
+        /// <summary>
+        /// Handles execution request from the ViewModel
+        /// </summary>
+        private async void OnExecutionRequested(object? sender, EventArgs e)
+        {
+            try
+            {
+                _viewModel!.StatusMessage = "Executing graph operations...";
+
+                // Parse operations from the graph nodes
+                var operations = ParseGraphOperations();
+
+                if (operations.Count == 0)
+                {
+                    MessageBox.Show(
+                        "No executable operations found in the graph.\n\n" +
+                        "Please add nodes with JSON data containing operation definitions.",
+                        "No Operations",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information
+                    );
+                    _viewModel.StatusMessage = "No operations to execute";
+                    return;
+                }
+
+                // Execute the operations
+                await _executor.ExecuteOperationsAsync(operations);
+
+                _viewModel.StatusMessage = $"Execution completed. {operations.Count} operation(s) executed successfully.";
+
+                MessageBox.Show(
+                    $"Execution completed successfully!\n\n{operations.Count} operation(s) executed.",
+                    "Execution Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
+            }
+            catch (Exception ex)
+            {
+                _viewModel!.StatusMessage = $"Execution failed: {ex.Message}";
+                MessageBox.Show(
+                    $"Execution failed:\n\n{ex.Message}",
+                    "Execution Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error
+                );
+            }
+        }
+
+        /// <summary>
+        /// Parses graph nodes to extract operation definitions
+        /// </summary>
+        private List<OperationModel> ParseGraphOperations()
+        {
+            var operations = new List<OperationModel>();
+
+            if (_viewModel?.CurrentGraph?.Nodes == null)
+                return operations;
+
+            // Sort nodes by their position or a sequence number if available
+            var sortedNodes = _viewModel.CurrentGraph.Nodes
+                .OrderBy(n => n.Y)
+                .ThenBy(n => n.X)
+                .ToList();
+
+            int priority = 1;
+            foreach (var node in sortedNodes)
+            {
+                try
+                {
+                    // Try to parse JSON data from node
+                    if (!string.IsNullOrWhiteSpace(node.JsonData))
+                    {
+                        var operation = System.Text.Json.JsonSerializer.Deserialize<OperationModel>(
+                            node.JsonData,
+                            new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNameCaseInsensitive = true 
+                            }
+                        );
+
+                        if (operation != null && !string.IsNullOrEmpty(operation.Type))
+                        {
+                            // Set priority based on node order if not specified
+                            if (operation.Priority == 0)
+                                operation.Priority = priority++;
+
+                            operations.Add(operation);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Skip nodes with invalid JSON
+                    continue;
+                }
+            }
+
+            return operations;
+        }
+
         private void MenuItem_About_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
@@ -682,12 +787,74 @@ namespace GraphSimulator
             // Subscribe to property changes on the staging model to show live preview
             editModel.PropertyChanged -= NodeEditModel_PropertyChanged; // Remove old subscription if any
             editModel.PropertyChanged += NodeEditModel_PropertyChanged;
+            
+            // Update operation-specific field visibility
+            UpdateOperationFieldsVisibility(editModel.Type);
+        }
+
+        private void UpdateOperationFieldsVisibility(string operationType)
+        {
+            // Hide all operation-specific fields first
+            MouseOperationFields.Visibility = Visibility.Collapsed;
+            ScrollOperationFields.Visibility = Visibility.Collapsed;
+            KeyOperationFields.Visibility = Visibility.Collapsed;
+            TypeTextFields.Visibility = Visibility.Collapsed;
+            WaitOperationFields.Visibility = Visibility.Collapsed;
+            CustomCodeFields.Visibility = Visibility.Collapsed;
+
+            // Show relevant fields based on operation type
+            switch (operationType?.ToLower())
+            {
+                case "mouse_left_click":
+                case "mouse_right_click":
+                case "mouse_move":
+                    MouseOperationFields.Visibility = Visibility.Visible;
+                    break;
+                case "scroll_up":
+                case "scroll_down":
+                    ScrollOperationFields.Visibility = Visibility.Visible;
+                    break;
+                case "key_press":
+                case "key_down":
+                case "key_up":
+                    KeyOperationFields.Visibility = Visibility.Visible;
+                    break;
+                case "type_text":
+                    TypeTextFields.Visibility = Visibility.Visible;
+                    break;
+                case "wait":
+                    WaitOperationFields.Visibility = Visibility.Visible;
+                    break;
+                case "custom_code":
+                    CustomCodeFields.Visibility = Visibility.Visible;
+                    break;
+            }
         }
 
         private void NodeEditModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (_viewModel?.SelectedNode == null)
                 return;
+
+            // Update operation field visibility when type changes
+            if (e.PropertyName == nameof(NodeEditModel.Type) && sender is NodeEditModel editModel)
+            {
+                UpdateOperationFieldsVisibility(editModel.Type);
+                
+                // Also update the canvas since type change affects color
+                GraphCanvasControl.SelectedNodeEditModel = _viewModel.SelectedNodeEdit;
+                GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
+                GraphCanvasControl.RenderGraph(_viewModel.CurrentGraph);
+            }
+
+            // Update JSON editor when JsonData changes
+            if (e.PropertyName == nameof(NodeEditModel.JsonData) && sender is NodeEditModel model)
+            {
+                if (JsonEditor != null && JsonEditor.Text != model.JsonData)
+                {
+                    JsonEditor.Text = model.JsonData;
+                }
+            }
 
             // Update the selected node's visual properties in real-time for preview
             if (e.PropertyName == nameof(NodeEditModel.Color) ||                 e.PropertyName == nameof(NodeEditModel.Name) ||
