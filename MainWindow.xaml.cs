@@ -32,8 +32,9 @@ namespace GraphSimulator
         private Execute _executor = new Execute();
         private System.Windows.Threading.DispatcherTimer? _mousePositionTimer;
         private bool _isTrackingMousePosition = false;
-        private int _scrollMeasureAmount = 0;
-        private bool _isScrollMeasureActive = false;
+    private int _scrollMeasureAmount = 0;
+    private int _scrollMeasureHorizontalAmount = 0;
+    private bool _isScrollMeasureActive = false;
         
         public MainWindow()
         {
@@ -1139,16 +1140,18 @@ namespace GraphSimulator
         {
             _isScrollMeasureActive = true;
             _scrollMeasureAmount = 0;
+            _scrollMeasureHorizontalAmount = 0;
             ScrollMeasureText.Visibility = Visibility.Visible;
+            ScrollMeasureHorizontalText.Visibility = Visibility.Visible;
             ResetScrollButton.Visibility = Visibility.Visible;
+            ResetHScrollButton.Visibility = Visibility.Visible;
             UpdateScrollMeasureDisplay();
-            
             // Attach scroll event to the main window
             this.PreviewMouseWheel += MainWindow_PreviewMouseWheel;
-            
+            this.PreviewMouseWheel += MainWindow_PreviewMouseHWheel;
             if (_viewModel != null)
             {
-                _viewModel.StatusMessage = "Scroll measurement enabled - Use two-finger swipe or scroll wheel";
+                _viewModel.StatusMessage = "Scroll measurement enabled - Use two-finger swipe or scroll wheel (vertical/horizontal)";
             }
         }
 
@@ -1159,11 +1162,12 @@ namespace GraphSimulator
         {
             _isScrollMeasureActive = false;
             ScrollMeasureText.Visibility = Visibility.Collapsed;
+            ScrollMeasureHorizontalText.Visibility = Visibility.Collapsed;
             ResetScrollButton.Visibility = Visibility.Collapsed;
-            
+            ResetHScrollButton.Visibility = Visibility.Collapsed;
             // Detach scroll event
             this.PreviewMouseWheel -= MainWindow_PreviewMouseWheel;
-            
+            this.PreviewMouseWheel -= MainWindow_PreviewMouseHWheel;
             if (_viewModel != null)
             {
                 _viewModel.StatusMessage = "Scroll measurement disabled";
@@ -1177,10 +1181,21 @@ namespace GraphSimulator
         {
             if (_isScrollMeasureActive)
             {
-                // Accumulate scroll delta
+                // Accumulate scroll delta (vertical)
                 _scrollMeasureAmount += e.Delta;
                 UpdateScrollMeasureDisplay();
             }
+
+        // Handle horizontal mouse wheel events (if supported)
+        private void MainWindow_PreviewMouseHWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (_isScrollMeasureActive)
+            {
+                // Accumulate horizontal scroll delta
+                _scrollMeasureHorizontalAmount += e.Delta;
+                UpdateScrollMeasureDisplay();
+            }
+        }
         }
 
         /// <summary>
@@ -1190,10 +1205,18 @@ namespace GraphSimulator
         {
             _scrollMeasureAmount = 0;
             UpdateScrollMeasureDisplay();
-            
             if (_viewModel != null)
             {
                 _viewModel.StatusMessage = "Scroll counter reset to 0";
+            }
+
+        private void ResetHScroll_Click(object sender, RoutedEventArgs e)
+        {
+            _scrollMeasureHorizontalAmount = 0;
+            UpdateScrollMeasureDisplay();
+            if (_viewModel != null)
+            {
+                _viewModel.StatusMessage = "Horizontal scroll counter reset to 0";
             }
         }
 
@@ -1203,6 +1226,7 @@ namespace GraphSimulator
         private void UpdateScrollMeasureDisplay()
         {
             ScrollMeasureText.Text = $"Scroll: {_scrollMeasureAmount} (↑positive / ↓negative)";
+            ScrollMeasureHorizontalText.Text = $"HScroll: {_scrollMeasureHorizontalAmount} (→positive / ←negative)";
         }
 
         #endregion
