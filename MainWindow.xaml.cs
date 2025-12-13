@@ -1296,7 +1296,6 @@ namespace GraphSimulator
                 MessageBox.Show($"Error saving executable graph: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        #endregion
+       
     }
 }

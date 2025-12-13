@@ -80,7 +80,7 @@
                         <TextBlock VerticalAlignment="Center" Text="{Binding CanvasZoom}" Margin="0,0,8,0"/>
                     </StackPanel>
                 </TabItem>
-                <TabItem Header="Mouse & Scroll" Height="48">
+                <TabItem Header="Mouse &amp; Scroll" Height="48">
                     <StackPanel Orientation="Horizontal" Background="#F5F5F5" Height="48">
                         <CheckBox x:Name="ShowMousePositionCheckBox" Content="Show Mouse Position" VerticalAlignment="Center" Margin="8,0" Checked="ShowMousePosition_Checked" Unchecked="ShowMousePosition_Unchecked" ToolTip="Display real-time mouse coordinates"/>
                         <TextBlock x:Name="MousePositionText" VerticalAlignment="Center" Margin="8,0" Foreground="#007ACC" FontWeight="Bold" Text="X: 0, Y: 0" Visibility="Collapsed"/>
