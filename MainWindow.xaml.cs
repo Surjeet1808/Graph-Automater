@@ -1186,7 +1186,7 @@ namespace GraphSimulator
                 UpdateScrollMeasureDisplay();
             }
 
-        // Handle horizontal mouse wheel events (if supported)
+            // Handle horizontal mouse wheel events (if supported)
         private void MainWindow_PreviewMouseHWheel(object sender, MouseWheelEventArgs e)
         {
             if (_isScrollMeasureActive)
@@ -1208,6 +1208,7 @@ namespace GraphSimulator
             {
                 _viewModel.StatusMessage = "Scroll counter reset to 0";
             }
+        }
 
         private void ResetHScroll_Click(object sender, RoutedEventArgs e)
         {
