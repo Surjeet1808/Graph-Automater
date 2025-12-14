@@ -572,7 +572,7 @@ namespace GraphSimulator
         {
             try
             {
-                _viewModel!.StatusMessage = "Executing graph operations...";
+                _viewModel!.StatusMessage = "Validating graph structure...";
 
                 // Parse operations from the graph nodes
                 var operations = ParseGraphOperations();
@@ -590,8 +590,13 @@ namespace GraphSimulator
                     return;
                 }
 
+                // Validate the entire operation tree including nested graphs
+                _viewModel.StatusMessage = "Validating execution tree (including nested graphs)...";
+                await _executor.ValidateOperationTreeAsync(operations);
+
+                _viewModel.StatusMessage = "✓ Validation passed. Executing operations...";
+
                 // Execute the operations
-                _viewModel.StatusMessage = "Executing operations...";
                 await _executor.ExecuteOperationsAsync(operations);
 
                 _viewModel.StatusMessage = $"✓ Execution completed successfully. {operations.Count} operation(s) executed.";
@@ -602,7 +607,7 @@ namespace GraphSimulator
                     MessageBox.Show(
                         $"✓ Execution completed successfully!\n\n" +
                         $"{operations.Count} operation(s) executed.\n\n" +
-                        $"All nested graphs (if any) were executed synchronously.",
+                        $"All nested graphs were validated and executed synchronously following their link chains.",
                         "Execution Complete",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information

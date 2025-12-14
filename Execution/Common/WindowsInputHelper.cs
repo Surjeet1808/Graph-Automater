@@ -51,15 +51,28 @@ namespace GraphSimulator.Execution.Controller
         [StructLayout(LayoutKind.Sequential)]
         private struct INPUT
         {
-            public int type;
-            public InputUnion u;
+            public uint type;
+            public INPUTUNION U;
         }
 
-        [StructLayout(LayoutKind.Explicit)]
-        private struct InputUnion
+        [StructLayout(LayoutKind.Explicit, Size = 28)]
+        private struct INPUTUNION
         {
             [FieldOffset(0)]
+            public MOUSEINPUT mi;
+            [FieldOffset(0)]
             public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -95,47 +108,82 @@ namespace GraphSimulator.Execution.Controller
 
         public static void TypeText(string text)
         {
+            if (string.IsNullOrEmpty(text))
+                return;
+
             foreach (char c in text)
             {
-                // Use Unicode input for all characters (supports emojis and special characters)
-                INPUT[] inputs = new INPUT[2];
-                
-                // Key down
-                inputs[0] = new INPUT
-                {
-                    type = INPUT_KEYBOARD,
-                    u = new InputUnion
-                    {
-                        ki = new KEYBDINPUT
-                        {
-                            wVk = 0,
-                            wScan = c,
-                            dwFlags = KEYEVENTF_UNICODE,
-                            time = 0,
-                            dwExtraInfo = IntPtr.Zero
-                        }
-                    }
-                };
-                
-                // Key up
-                inputs[1] = new INPUT
-                {
-                    type = INPUT_KEYBOARD,
-                    u = new InputUnion
-                    {
-                        ki = new KEYBDINPUT
-                        {
-                            wVk = 0,
-                            wScan = c,
-                            dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
-                            time = 0,
-                            dwExtraInfo = IntPtr.Zero
-                        }
-                    }
-                };
-                
-                SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+                SendUnicodeChar(c);
                 Thread.Sleep(10);
+            }
+        }
+
+        private static void SendUnicodeChar(char character)
+        {
+            INPUT[] inputs = new INPUT[2];
+            
+            // Key down
+            inputs[0] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new INPUTUNION
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = character,
+                        dwFlags = KEYEVENTF_UNICODE,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+            
+            // Key up
+            inputs[1] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new INPUTUNION
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = 0,
+                        wScan = character,
+                        dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+            
+            uint result = SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+            
+            if (result == 0)
+            {
+                // If SendInput failed, try using legacy keybd_event for ASCII chars
+                if (character < 128)
+                {
+                    short vk = VkKeyScan(character);
+                    if (vk != -1)
+                    {
+                        byte virtualKey = (byte)(vk & 0xFF);
+                        byte shiftState = (byte)(vk >> 8);
+
+                        if ((shiftState & 1) != 0)
+                        {
+                            keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
+                        }
+
+                        keybd_event(virtualKey, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
+                        Thread.Sleep(5);
+                        keybd_event(virtualKey, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+
+                        if ((shiftState & 1) != 0)
+                        {
+                            keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                        }
+                    }
+                }
             }
         }
 

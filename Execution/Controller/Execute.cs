@@ -14,6 +14,212 @@ namespace GraphSimulator.Execution.Controller
     {
         // Track graph execution stack to detect circular dependencies
         private readonly HashSet<string> _executionStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
+        // Track validated execution plan
+        private readonly List<string> _validatedExecutionPlan = new List<string>();
+
+        /// <summary>
+        /// Validate the entire operation tree before execution
+        /// </summary>
+        public async Task ValidateOperationTreeAsync(List<OperationModel> operations)
+        {
+            _validatedExecutionPlan.Clear();
+            _executionStack.Clear();
+            
+            foreach (var operation in operations)
+            {
+                await ValidateOperationAsync(operation);
+            }
+        }
+
+        /// <summary>
+        /// Recursively validate an operation and its nested graphs
+        /// </summary>
+        private async Task ValidateOperationAsync(OperationModel operation)
+        {
+            if (operation == null || string.IsNullOrEmpty(operation.Type))
+                return;
+
+            // Skip disabled operations
+            if (!operation.Enabled)
+                return;
+
+            // If this is a graph operation, validate the nested graph
+            if (operation.Type.ToLower() == "graph")
+            {
+                await ValidateGraphOperationAsync(operation);
+            }
+        }
+
+        /// <summary>
+        /// Validate a graph file and all its nested operations
+        /// </summary>
+        private async Task ValidateGraphOperationAsync(OperationModel operation)
+        {
+            // Validate graph file path
+            if (string.IsNullOrEmpty(operation.GraphFilePath))
+            {
+                throw new ArgumentException(
+                    $"❌ VALIDATION ERROR\n\n" +
+                    $"Graph operation is missing file path.\n\n" +
+                    $"Please select a valid graph file for this operation.");
+            }
+
+            if (!System.IO.File.Exists(operation.GraphFilePath))
+            {
+                throw new System.IO.FileNotFoundException(
+                    $"❌ VALIDATION ERROR - FILE NOT FOUND\n\n" +
+                    $"Graph file not found: {operation.GraphFilePath}\n\n" +
+                    $"Please verify the file path is correct and the file exists.");
+            }
+
+            // Get the absolute path to detect circular dependencies
+            string absolutePath = System.IO.Path.GetFullPath(operation.GraphFilePath);
+
+            // Check for circular dependency
+            if (_executionStack.Contains(absolutePath))
+            {
+                var stackList = string.Join("\n  → ", _executionStack);
+                throw new InvalidOperationException(
+                    $"❌ VALIDATION ERROR - CIRCULAR DEPENDENCY DETECTED!\n\n" +
+                    $"The graph file is already in the execution chain:\n\n" +
+                    $"Execution Chain:\n  → {stackList}\n  → {absolutePath} (CIRCULAR!)\n\n" +
+                    $"This would cause an infinite loop. Please check your graph references and remove the circular dependency.\n\n" +
+                    $"Common causes:\n" +
+                    $"• Graph A calls Graph B, and Graph B calls Graph A\n" +
+                    $"• Graph A calls itself directly\n" +
+                    $"• Graph A → B → C → A (circular chain)");
+            }
+
+            // Add to execution stack for validation
+            _executionStack.Add(absolutePath);
+            _validatedExecutionPlan.Add($"Graph: {System.IO.Path.GetFileName(absolutePath)}");
+
+            try
+            {
+                // Load the graph file
+                var fileService = new GraphSimulator.Services.FileService();
+                var graph = await fileService.LoadGraphAsync(operation.GraphFilePath);
+
+                if (graph == null)
+                {
+                    throw new InvalidOperationException(
+                        $"❌ VALIDATION ERROR - INVALID GRAPH FILE\n\n" +
+                        $"Failed to load graph from file: {operation.GraphFilePath}\n\n" +
+                        $"The file may be corrupted or in an invalid format.");
+                }
+
+                if (graph.Nodes == null || graph.Nodes.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"❌ VALIDATION ERROR - EMPTY GRAPH\n\n" +
+                        $"Graph file contains no nodes: {operation.GraphFilePath}\n\n" +
+                        $"Please ensure the graph has at least one operation node.");
+                }
+
+                // Find start node in nested graph
+                var startNode = graph.Nodes.FirstOrDefault(n => n.Type?.ToLower() == "start");
+                if (startNode == null)
+                {
+                    throw new InvalidOperationException(
+                        $"❌ VALIDATION ERROR - NO START NODE\n\n" +
+                        $"Graph file has no 'start' node: {operation.GraphFilePath}\n\n" +
+                        $"Each graph must have exactly one start node to define the execution flow.");
+                }
+
+                // Parse operations following the link chain
+                var nestedOperations = ParseGraphOperationsByLinks(graph, startNode);
+
+                if (nestedOperations.Count == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"❌ VALIDATION ERROR - NO VALID OPERATIONS\n\n" +
+                        $"No valid operations found in graph: {operation.GraphFilePath}\n\n" +
+                        $"Please ensure the graph contains properly configured operation nodes linked from the start node.");
+                }
+
+                // Recursively validate nested operations
+                foreach (var nestedOp in nestedOperations)
+                {
+                    await ValidateOperationAsync(nestedOp);
+                }
+            }
+            finally
+            {
+                // Remove from stack after validation
+                _executionStack.Remove(absolutePath);
+            }
+        }
+
+        /// <summary>
+        /// Parse graph operations by following node links from start node
+        /// </summary>
+        private List<OperationModel> ParseGraphOperationsByLinks(GraphSimulator.Models.Graph graph, GraphSimulator.Models.Node startNode)
+        {
+            var operations = new List<OperationModel>();
+            var visitedNodes = new HashSet<Guid>();
+            var currentNode = startNode;
+
+            while (currentNode != null)
+            {
+                // Check for cycles
+                if (visitedNodes.Contains(currentNode.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"❌ VALIDATION ERROR - CIRCULAR EXECUTION PATH\n\n" +
+                        $"Node '{currentNode.Name}' has already been visited in the execution chain.\n\n" +
+                        $"The graph contains a loop. Please remove circular links between nodes.");
+                }
+
+                visitedNodes.Add(currentNode.Id);
+
+                // Skip start node itself
+                if (currentNode.Type?.ToLower() != "start")
+                {
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(currentNode.JsonData))
+                        {
+                            var operation = System.Text.Json.JsonSerializer.Deserialize<OperationModel>(
+                                currentNode.JsonData,
+                                new System.Text.Json.JsonSerializerOptions 
+                                { 
+                                    PropertyNameCaseInsensitive = true 
+                                }
+                            );
+
+                            if (operation != null && !string.IsNullOrEmpty(operation.Type))
+                            {
+                                operations.Add(operation);
+                            }
+                        }
+                    }
+                    catch (System.Text.Json.JsonException jsonEx)
+                    {
+                        throw new InvalidOperationException(
+                            $"❌ VALIDATION ERROR - INVALID NODE DATA\n\n" +
+                            $"Invalid JSON data in node '{currentNode.Name}' (ID: {currentNode.Id})\n\n" +
+                            $"Error: {jsonEx.Message}\n\n" +
+                            $"Please verify the node's operation data is correctly formatted.");
+                    }
+                }
+
+                // Find next node by following outgoing link
+                var outgoingLink = graph.Links?.FirstOrDefault(l => l.SourceNodeId == currentNode.Id);
+                
+                if (outgoingLink != null)
+                {
+                    currentNode = graph.Nodes.FirstOrDefault(n => n.Id == outgoingLink.TargetNodeId);
+                }
+                else
+                {
+                    // No outgoing link - end of chain
+                    break;
+                }
+            }
+
+            return operations;
+        }
 
         /// <summary>
         /// Execute a single operation
@@ -221,43 +427,23 @@ namespace GraphSimulator.Execution.Controller
                     throw new InvalidOperationException($"Graph file contains no nodes: {operation.GraphFilePath}\n\nPlease ensure the graph has at least one operation node.");
                 }
 
-                // Parse operations from the loaded graph
-                var nestedOperations = new List<OperationModel>();
-                
-                foreach (var node in graph.Nodes.OrderBy(n => n.Y).ThenBy(n => n.X))
+                // Find start node in nested graph
+                var startNode = graph.Nodes.FirstOrDefault(n => n.Type?.ToLower() == "start");
+                if (startNode == null)
                 {
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(node.JsonData))
-                            continue;
-
-                        var nestedOp = System.Text.Json.JsonSerializer.Deserialize<OperationModel>(
-                            node.JsonData,
-                            new System.Text.Json.JsonSerializerOptions 
-                            { 
-                                PropertyNameCaseInsensitive = true 
-                            }
-                        );
-
-                        if (nestedOp != null && !string.IsNullOrEmpty(nestedOp.Type))
-                        {
-                            nestedOperations.Add(nestedOp);
-                        }
-                    }
-                    catch (System.Text.Json.JsonException jsonEx)
-                    {
-                        throw new InvalidOperationException(
-                            $"Invalid JSON data in node '{node.Name}' (ID: {node.Id}) in graph: {operation.GraphFilePath}\n\n" +
-                            $"Error: {jsonEx.Message}\n\n" +
-                            "Please verify the node's operation data is correctly formatted.");
-                    }
+                    throw new InvalidOperationException(
+                        $"Graph file has no 'start' node: {operation.GraphFilePath}\n\n" +
+                        $"Each graph must have exactly one start node to define the execution flow.");
                 }
+
+                // Parse operations following node links from start node
+                var nestedOperations = ParseGraphOperationsByLinks(graph, startNode);
 
                 if (nestedOperations.Count == 0)
                 {
                     throw new InvalidOperationException(
                         $"No valid operations found in graph: {operation.GraphFilePath}\n\n" +
-                        "Please ensure the graph contains at least one properly configured operation node.");
+                        "Please ensure the graph contains properly configured operation nodes linked from the start node.");
                 }
 
                 // Log operation count
