@@ -204,6 +204,9 @@ namespace GraphSimulator.Execution.Controller
 
             try
             {
+                // Log nested graph execution start
+                System.Diagnostics.Debug.WriteLine($"[Graph Execution] Starting nested graph: {operation.GraphFilePath}");
+                
                 // Load the graph file
                 var fileService = new GraphSimulator.Services.FileService();
                 var graph = await fileService.LoadGraphAsync(operation.GraphFilePath);
@@ -244,7 +247,7 @@ namespace GraphSimulator.Execution.Controller
                     catch (System.Text.Json.JsonException jsonEx)
                     {
                         throw new InvalidOperationException(
-                            $"Invalid JSON data in node '{node.Name}' (ID: {node.Id})\n\n" +
+                            $"Invalid JSON data in node '{node.Name}' (ID: {node.Id}) in graph: {operation.GraphFilePath}\n\n" +
                             $"Error: {jsonEx.Message}\n\n" +
                             "Please verify the node's operation data is correctly formatted.");
                     }
@@ -257,8 +260,14 @@ namespace GraphSimulator.Execution.Controller
                         "Please ensure the graph contains at least one properly configured operation node.");
                 }
 
-                // Execute all operations from the nested graph
+                // Log operation count
+                System.Diagnostics.Debug.WriteLine($"[Graph Execution] Found {nestedOperations.Count} operations in nested graph");
+
+                // Execute all operations from the nested graph synchronously
+                // This ensures each operation completes before moving to the next
                 await ExecuteOperationsAsync(nestedOperations);
+                
+                System.Diagnostics.Debug.WriteLine($"[Graph Execution] Completed nested graph: {operation.GraphFilePath}");
             }
             catch (InvalidOperationException)
             {
@@ -273,8 +282,9 @@ namespace GraphSimulator.Execution.Controller
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"Error executing graph file: {operation.GraphFilePath}\n\n" +
-                    $"Error: {ex.Message}", 
+                    $"Error executing nested graph file: {operation.GraphFilePath}\n\n" +
+                    $"Error: {ex.Message}\n\n" +
+                    $"Stack trace: {ex.StackTrace}", 
                     ex
                 );
             }
@@ -282,6 +292,7 @@ namespace GraphSimulator.Execution.Controller
             {
                 // Always remove from execution stack when done (even on error)
                 _executionStack.Remove(absolutePath);
+                System.Diagnostics.Debug.WriteLine($"[Graph Execution] Removed from execution stack: {absolutePath}");
             }
         }
 

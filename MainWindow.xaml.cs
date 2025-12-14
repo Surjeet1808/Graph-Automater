@@ -591,15 +591,18 @@ namespace GraphSimulator
                 }
 
                 // Execute the operations
+                _viewModel.StatusMessage = "Executing operations...";
                 await _executor.ExecuteOperationsAsync(operations);
 
-                _viewModel.StatusMessage = $"Execution completed. {operations.Count} operation(s) executed successfully.";
+                _viewModel.StatusMessage = $"✓ Execution completed successfully. {operations.Count} operation(s) executed.";
 
                 // Only show message box if not auto-executed from command line
                 if (!App.AutoExecute)
                 {
                     MessageBox.Show(
-                        $"Execution completed successfully!\n\n{operations.Count} operation(s) executed.",
+                        $"✓ Execution completed successfully!\n\n" +
+                        $"{operations.Count} operation(s) executed.\n\n" +
+                        $"All nested graphs (if any) were executed synchronously.",
                         "Execution Complete",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information

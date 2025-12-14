@@ -274,7 +274,18 @@
                                             <!-- Type Text Operation -->
                                             <StackPanel x:Name="TypeTextFields" Visibility="Collapsed">
                                                 <Label Content="Text to Type:" Margin="0,4,0,2"/>
-                                                <TextBox Text="{Binding SelectedNodeEdit.TextToType, UpdateSourceTrigger=PropertyChanged}" Padding="6" AcceptsReturn="False"/>
+                                                <TextBox Text="{Binding SelectedNodeEdit.TextToType, UpdateSourceTrigger=PropertyChanged}" 
+                                                         Padding="6" 
+                                                         AcceptsReturn="True" 
+                                                         TextWrapping="Wrap" 
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         MinHeight="60"
+                                                         MaxHeight="200"/>
+                                                <TextBlock Text="Supports multi-line text, emojis, and special characters. Press Enter for new lines." 
+                                                           FontSize="10" 
+                                                           Foreground="Gray" 
+                                                           Margin="0,2,0,0"
+                                                           TextWrapping="Wrap"/>
                                             </StackPanel>
 
                                             <!-- Wait Operation -->

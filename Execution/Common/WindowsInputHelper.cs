@@ -32,6 +32,9 @@ namespace GraphSimulator.Execution.Controller
         [DllImport("user32.dll")]
         private static extern short VkKeyScan(char ch);
 
+        [DllImport("user32.dll")]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
@@ -41,6 +44,33 @@ namespace GraphSimulator.Execution.Controller
 
         private const uint KEYEVENTF_KEYDOWN = 0x0000;
         private const uint KEYEVENTF_KEYUP = 0x0002;
+        private const uint KEYEVENTF_UNICODE = 0x0004;
+
+        private const int INPUT_KEYBOARD = 1;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public int type;
+            public InputUnion u;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)]
+            public KEYBDINPUT ki;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
 
         public static void ClickAt(int x, int y)
         {
@@ -67,24 +97,44 @@ namespace GraphSimulator.Execution.Controller
         {
             foreach (char c in text)
             {
-                short vk = VkKeyScan(c);
-                byte virtualKey = (byte)(vk & 0xFF);
-                byte shiftState = (byte)(vk >> 8);
-
-                if ((shiftState & 1) != 0)
+                // Use Unicode input for all characters (supports emojis and special characters)
+                INPUT[] inputs = new INPUT[2];
+                
+                // Key down
+                inputs[0] = new INPUT
                 {
-                    keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
-                }
-
-                keybd_event(virtualKey, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
-                Thread.Sleep(10);
-                keybd_event(virtualKey, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-
-                if ((shiftState & 1) != 0)
+                    type = INPUT_KEYBOARD,
+                    u = new InputUnion
+                    {
+                        ki = new KEYBDINPUT
+                        {
+                            wVk = 0,
+                            wScan = c,
+                            dwFlags = KEYEVENTF_UNICODE,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                };
+                
+                // Key up
+                inputs[1] = new INPUT
                 {
-                    keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                }
-
+                    type = INPUT_KEYBOARD,
+                    u = new InputUnion
+                    {
+                        ki = new KEYBDINPUT
+                        {
+                            wVk = 0,
+                            wScan = c,
+                            dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = IntPtr.Zero
+                        }
+                    }
+                };
+                
+                SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
                 Thread.Sleep(10);
             }
         }
