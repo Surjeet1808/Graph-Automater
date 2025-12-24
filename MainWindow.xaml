@@ -367,6 +367,7 @@
 
                                             <Label Content="Value Source:" Margin="0,8,0,2"/>
                                             <ComboBox SelectedItem="{Binding SelectedNodeEdit.ValueSource, UpdateSourceTrigger=PropertyChanged}" Padding="6">
+                                                <System:String>node</System:String>
                                                 <System:String>date</System:String>
                                                 <System:String>array</System:String>
                                                 <System:String>frequency-array</System:String>

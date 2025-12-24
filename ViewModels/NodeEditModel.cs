@@ -91,7 +91,7 @@ namespace GraphSimulator.ViewModels
         private string previousNodeId = "";
         public string PreviousNodeId { get => previousNodeId; set { SetProperty(ref previousNodeId, value); UpdateJsonData(); } }
 
-        private string valueSource = "date";
+        private string valueSource = "node";
         public string ValueSource { get => valueSource; set { SetProperty(ref valueSource, value); UpdateJsonData(); } }
 
         private bool isUpdatingFromJson = false;
@@ -334,7 +334,7 @@ namespace GraphSimulator.ViewModels
 
                 if (root.TryGetProperty("ValueSource", out var valueSourceElement))
                 {
-                    valueSource = valueSourceElement.GetString() ?? "date";
+                    valueSource = valueSourceElement.GetString() ?? "node";
                 }
 
                 OnPropertyChanged(nameof(XCoordinate));

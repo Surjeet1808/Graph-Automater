@@ -73,9 +73,9 @@ namespace GraphSimulator.Execution.Model
         public string? PreviousNodeId { get; set; }
 
         /// <summary>
-        /// Source for operation values (date, array, frequency-array, excel)
+        /// Source for operation values (node, date, array, frequency-array, excel)
         /// </summary>
-        public string ValueSource { get; set; } = "date";
+        public string ValueSource { get; set; } = "node";
     }
 
     /// <summary>
