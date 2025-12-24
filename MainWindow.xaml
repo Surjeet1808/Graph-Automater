@@ -7,6 +7,7 @@
         xmlns:utilities="clr-namespace:GraphSimulator.Utilities"
         xmlns:views="clr-namespace:GraphSimulator.Views"
         xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:System="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="Graph Simulator" 
         Height="800" 
@@ -366,12 +367,10 @@
 
                                             <Label Content="Value Source:" Margin="0,8,0,2"/>
                                             <ComboBox SelectedItem="{Binding SelectedNodeEdit.ValueSource, UpdateSourceTrigger=PropertyChanged}" Padding="6">
-                                                <ComboBox.Items>
-                                                    <ComboBoxItem Content="date" IsSelected="True"/>
-                                                    <ComboBoxItem Content="array"/>
-                                                    <ComboBoxItem Content="frequency-array"/>
-                                                    <ComboBoxItem Content="excel"/>
-                                                </ComboBox.Items>
+                                                <System:String>date</System:String>
+                                                <System:String>array</System:String>
+                                                <System:String>frequency-array</System:String>
+                                                <System:String>excel</System:String>
                                             </ComboBox>
                                             <TextBlock Text="(Source for operation values)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
 
