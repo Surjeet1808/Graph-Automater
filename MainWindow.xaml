@@ -383,13 +383,13 @@
                                                                FontSize="9" Foreground="#666" TextWrapping="Wrap" Margin="0,0,0,4"/>
                                                     <TextBlock Text="Example:" FontWeight="SemiBold" FontSize="10" Margin="0,4,0,2"/>
                                                     <TextBlock FontSize="9" Foreground="#444" TextWrapping="Wrap" Margin="0,0,0,4">
-                                                        <Run Text="{"/>
+                                                        <Run Text="{}{"/>
                                                         <LineBreak/>
                                                         <Run Text="  &quot;2025-12-24&quot;: { &quot;IntValues&quot;: [100, 200] },"/>
                                                         <LineBreak/>
                                                         <Run Text="  &quot;2025-12-25&quot;: { &quot;IntValues&quot;: [150, 250] }"/>
                                                         <LineBreak/>
-                                                        <Run Text="}"/>
+                                                        <Run Text="{}}"/>
                                                     </TextBlock>
                                                     <avalonedit:TextEditor x:Name="DateMapEditor"
                                                                            Height="120"
