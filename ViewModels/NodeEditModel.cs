@@ -94,6 +94,9 @@ namespace GraphSimulator.ViewModels
         private string valueSource = "node";
         public string ValueSource { get => valueSource; set { SetProperty(ref valueSource, value); UpdateJsonData(); } }
 
+        private string dateMapJson = "{}";
+        public string DateMapJson { get => dateMapJson; set { SetProperty(ref dateMapJson, value); UpdateJsonData(); } }
+
         private bool isUpdatingFromJson = false;
 
         private void UpdateJsonDataForType()
@@ -162,6 +165,21 @@ namespace GraphSimulator.ViewModels
 
             try
             {
+                object? dateMap = null;
+                
+                // Parse DateMap if ValueSource is date-map
+                if (valueSource == "date-map" && !string.IsNullOrWhiteSpace(dateMapJson))
+                {
+                    try
+                    {
+                        dateMap = System.Text.Json.JsonSerializer.Deserialize<object>(dateMapJson);
+                    }
+                    catch
+                    {
+                        dateMap = null;
+                    }
+                }
+
                 var operation = new
                 {
                     Type = this.type,
@@ -174,6 +192,7 @@ namespace GraphSimulator.ViewModels
                     DelayAfter = delayAfter,
                     Frequency = frequency,
                     ValueSource = valueSource,
+                    DateMap = dateMap,
                     NextNodeId = string.IsNullOrEmpty(nextNodeId) ? null : nextNodeId,
                     PreviousNodeId = string.IsNullOrEmpty(previousNodeId) ? null : previousNodeId,
                     Description = string.IsNullOrEmpty(description) ? null : description,
@@ -337,6 +356,15 @@ namespace GraphSimulator.ViewModels
                     valueSource = valueSourceElement.GetString() ?? "node";
                 }
 
+                if (root.TryGetProperty("DateMap", out var dateMapElement))
+                {
+                    dateMapJson = dateMapElement.ToString();
+                }
+                else
+                {
+                    dateMapJson = "{}";
+                }
+
                 OnPropertyChanged(nameof(XCoordinate));
                 OnPropertyChanged(nameof(YCoordinate));
                 OnPropertyChanged(nameof(ScrollAmount));
@@ -349,6 +377,7 @@ namespace GraphSimulator.ViewModels
                 OnPropertyChanged(nameof(DelayAfter));
                 OnPropertyChanged(nameof(Frequency));
                 OnPropertyChanged(nameof(ValueSource));
+                OnPropertyChanged(nameof(DateMapJson));
                 OnPropertyChanged(nameof(NextNodeId));
                 OnPropertyChanged(nameof(PreviousNodeId));
                 OnPropertyChanged(nameof(Priority));

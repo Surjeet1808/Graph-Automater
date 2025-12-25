@@ -271,11 +271,18 @@ namespace GraphSimulator
                         {
                             JsonEditor.Text = _viewModel.SelectedNodeEdit?.JsonData ?? string.Empty;
                         }
+                        // Update DateMap editor
+                        if (DateMapEditor != null && _viewModel.SelectedNodeEdit != null)
+                        {
+                            DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
+                        }
                         // Subscribe to SelectedNodeEdit changes for live preview
                         SubscribeToNodeEditPreview(_viewModel.SelectedNodeEdit);
                         // Pass staging model and selected node id to canvas for live preview rendering
                         GraphCanvasControl.SelectedNodeEditModel = _viewModel.SelectedNodeEdit;
                         GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
+                        // Update DateMap panel visibility
+                        UpdateDateMapPanelVisibility();
                     }
                 };
 
@@ -1041,6 +1048,22 @@ namespace GraphSimulator
                 // Also update the canvas since type change affects color
                 GraphCanvasControl.SelectedNodeEditModel = _viewModel.SelectedNodeEdit;
                 GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
+            }
+
+            // Update DateMap panel visibility when ValueSource changes
+            if (e.PropertyName == nameof(NodeEditModel.ValueSource))
+            {
+                UpdateDateMapPanelVisibility();
+            }
+
+            // Sync DateMapEditor text back to model when it changes
+            if (e.PropertyName == nameof(NodeEditModel.DateMapJson) && sender is NodeEditModel model)
+            {
+                if (DateMapEditor != null && DateMapEditor.Text != model.DateMapJson)
+                {
+                    DateMapEditor.Text = model.DateMapJson ?? "{}";
+                }
+            }
                 GraphCanvasControl.RenderGraph(_viewModel.CurrentGraph);
             }
 
@@ -1388,6 +1411,37 @@ namespace GraphSimulator
             catch (Exception ex)
             {
                 MessageBox.Show($"Error saving executable graph: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UpdateDateMapPanelVisibility()
+        {
+            if (DateMapPanel == null || _viewModel?.SelectedNodeEdit == null)
+                return;
+
+            // Show DateMap panel only when ValueSource is "date-map"
+            DateMapPanel.Visibility = _viewModel.SelectedNodeEdit.ValueSource == "date-map" 
+                ? Visibility.Visible 
+                : Visibility.Collapsed;
+
+            // Setup DateMapEditor text changed handler
+            if (DateMapEditor != null && _viewModel.SelectedNodeEdit.ValueSource == "date-map")
+            {
+                // Remove old handler to avoid duplicates
+                DateMapEditor.TextChanged -= DateMapEditor_TextChanged;
+                // Add new handler
+                DateMapEditor.TextChanged += DateMapEditor_TextChanged;
+                // Set initial text
+                DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
+            }
+        }
+
+        private void DateMapEditor_TextChanged(object? sender, EventArgs e)
+        {
+            if (_viewModel?.SelectedNodeEdit != null && DateMapEditor != null)
+            {
+                // Update the model with the new DateMap JSON
+                _viewModel.SelectedNodeEdit.DateMapJson = DateMapEditor.Text;
             }
         }
        

@@ -368,12 +368,38 @@
                                             <Label Content="Value Source:" Margin="0,8,0,2"/>
                                             <ComboBox SelectedItem="{Binding SelectedNodeEdit.ValueSource, UpdateSourceTrigger=PropertyChanged}" Padding="6">
                                                 <System:String>node</System:String>
-                                                <System:String>date</System:String>
+                                                <System:String>date-map</System:String>
                                                 <System:String>array</System:String>
                                                 <System:String>frequency-array</System:String>
                                                 <System:String>excel</System:String>
                                             </ComboBox>
                                             <TextBlock Text="(Source for operation values)" FontSize="10" Foreground="Gray" Margin="0,2,0,0"/>
+
+                                            <!-- Date Map Input (Visible only when ValueSource is date-map) -->
+                                            <Border x:Name="DateMapPanel" Visibility="Collapsed" BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,8,0,0" Background="#FFFEF5">
+                                                <StackPanel>
+                                                    <TextBlock Text="Date-Based Values" FontWeight="Bold" FontSize="11" Margin="0,0,0,4"/>
+                                                    <TextBlock Text="Format: { &quot;YYYY-MM-DD&quot;: { &quot;IntValues&quot;: [x, y], &quot;StringValues&quot;: [&quot;text&quot;] } }" 
+                                                               FontSize="9" Foreground="#666" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                                    <TextBlock Text="Example:" FontWeight="SemiBold" FontSize="10" Margin="0,4,0,2"/>
+                                                    <TextBlock FontSize="9" Foreground="#444" TextWrapping="Wrap" Margin="0,0,0,4">
+                                                        <Run Text="{"/>
+                                                        <LineBreak/>
+                                                        <Run Text="  &quot;2025-12-24&quot;: { &quot;IntValues&quot;: [100, 200] },"/>
+                                                        <LineBreak/>
+                                                        <Run Text="  &quot;2025-12-25&quot;: { &quot;IntValues&quot;: [150, 250] }"/>
+                                                        <LineBreak/>
+                                                        <Run Text="}"/>
+                                                    </TextBlock>
+                                                    <avalonedit:TextEditor x:Name="DateMapEditor"
+                                                                           Height="120"
+                                                                           FontFamily="Courier New"
+                                                                           FontSize="10"
+                                                                           ShowLineNumbers="False"
+                                                                           HorizontalScrollBarVisibility="Auto"
+                                                                           VerticalScrollBarVisibility="Auto"/>
+                                                </StackPanel>
+                                            </Border>
 
                                             <Label Content="Description:" Margin="0,8,0,2"/>
                                             <TextBox Text="{Binding SelectedNodeEdit.Description, UpdateSourceTrigger=PropertyChanged}" Padding="6"/>

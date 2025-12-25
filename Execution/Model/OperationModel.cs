@@ -76,6 +76,21 @@ namespace GraphSimulator.Execution.Model
         /// Source for operation values (node, date, array, frequency-array, excel)
         /// </summary>
         public string ValueSource { get; set; } = "node";
+
+        /// <summary>
+        /// Date-mapped values for date-based value source
+        /// Key: Date in YYYY-MM-DD format, Value: DateMappedValues with IntValues and StringValues
+        /// </summary>
+        public Dictionary<string, DateMappedValues>? DateMap { get; set; }
+    }
+
+    /// <summary>
+    /// Represents values for a specific date in date-map
+    /// </summary>
+    public class DateMappedValues
+    {
+        public int[]? IntValues { get; set; }
+        public string[]? StringValues { get; set; }
     }
 
     /// <summary>
