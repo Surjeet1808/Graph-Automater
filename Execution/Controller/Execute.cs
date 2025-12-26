@@ -276,8 +276,16 @@ namespace GraphSimulator.Execution.Controller
         /// </summary>
         private async Task ExecuteSingleOperationAsync(OperationModel operation)
         {
+            // Generate node identifier for date-json value source
+            string? nodeIdentifier = null;
+            if (operation.NodeName != null && operation.NodeId != null)
+            {
+                string sanitizedName = operation.NodeName.Replace(" ", "-");
+                nodeIdentifier = $"{sanitizedName}-{operation.NodeId}";
+            }
+
             // Resolve values from ValueSource
-            var resolvedValues = GraphSimulator.Execution.Services.ValueSourceService.ResolveValues(operation);
+            var resolvedValues = GraphSimulator.Execution.Services.ValueSourceService.ResolveValues(operation, nodeIdentifier);
 
             // Execute based on type
             try

@@ -97,6 +97,9 @@ namespace GraphSimulator.ViewModels
         private string dateMapJson = "{}";
         public string DateMapJson { get => dateMapJson; set { SetProperty(ref dateMapJson, value); UpdateJsonData(); } }
 
+        private string dateJsonFilePath = "";
+        public string DateJsonFilePath { get => dateJsonFilePath; set { SetProperty(ref dateJsonFilePath, value); UpdateJsonData(); } }
+
         private bool isUpdatingFromJson = false;
 
         private void UpdateJsonDataForType()
@@ -193,6 +196,7 @@ namespace GraphSimulator.ViewModels
                     Frequency = frequency,
                     ValueSource = valueSource,
                     DateMap = dateMap,
+                    DateJsonFilePath = string.IsNullOrEmpty(dateJsonFilePath) ? null : dateJsonFilePath,
                     NextNodeId = string.IsNullOrEmpty(nextNodeId) ? null : nextNodeId,
                     PreviousNodeId = string.IsNullOrEmpty(previousNodeId) ? null : previousNodeId,
                     Description = string.IsNullOrEmpty(description) ? null : description,
@@ -365,6 +369,11 @@ namespace GraphSimulator.ViewModels
                     dateMapJson = "{}";
                 }
 
+                if (root.TryGetProperty("DateJsonFilePath", out var dateJsonFilePathElement))
+                {
+                    dateJsonFilePath = dateJsonFilePathElement.GetString() ?? "";
+                }
+
                 OnPropertyChanged(nameof(XCoordinate));
                 OnPropertyChanged(nameof(YCoordinate));
                 OnPropertyChanged(nameof(ScrollAmount));
@@ -378,6 +387,7 @@ namespace GraphSimulator.ViewModels
                 OnPropertyChanged(nameof(Frequency));
                 OnPropertyChanged(nameof(ValueSource));
                 OnPropertyChanged(nameof(DateMapJson));
+                OnPropertyChanged(nameof(DateJsonFilePath));
                 OnPropertyChanged(nameof(NextNodeId));
                 OnPropertyChanged(nameof(PreviousNodeId));
                 OnPropertyChanged(nameof(Priority));

@@ -73,7 +73,7 @@ namespace GraphSimulator.Execution.Model
         public string? PreviousNodeId { get; set; }
 
         /// <summary>
-        /// Source for operation values (node, date, array, frequency-array, excel)
+        /// Source for operation values (node, date-map, date-json, array, frequency-array, excel)
         /// </summary>
         public string ValueSource { get; set; } = "node";
 
@@ -82,6 +82,21 @@ namespace GraphSimulator.Execution.Model
         /// Key: Date in YYYY-MM-DD format, Value: DateMappedValues with IntValues and StringValues
         /// </summary>
         public Dictionary<string, DateMappedValues>? DateMap { get; set; }
+
+        /// <summary>
+        /// File path to external JSON file for date-json value source
+        /// </summary>
+        public string? DateJsonFilePath { get; set; }
+
+        /// <summary>
+        /// Node name (used for generating node identifier for date-json)
+        /// </summary>
+        public string? NodeName { get; set; }
+
+        /// <summary>
+        /// Node ID (used for generating node identifier for date-json)
+        /// </summary>
+        public Guid? NodeId { get; set; }
     }
 
     /// <summary>

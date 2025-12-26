@@ -276,6 +276,8 @@ namespace GraphSimulator
                         {
                             DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
                         }
+                        // Update Node Identifier display
+                        UpdateNodeIdentifierDisplay();
                         // Subscribe to SelectedNodeEdit changes for live preview
                         SubscribeToNodeEditPreview(_viewModel.SelectedNodeEdit);
                         // Pass staging model and selected node id to canvas for live preview rendering
@@ -758,6 +760,9 @@ namespace GraphSimulator
                             {
                                 // Set priority based on traversal order
                                 operation.Priority = priority++;
+                                // Store node information for date-json value source
+                                operation.NodeName = currentNode.Name;
+                                operation.NodeId = currentNode.Id;
                                 operations.Add(operation);
                             }
                         }
@@ -1084,6 +1089,47 @@ namespace GraphSimulator
                 GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
                 // Re-render to show preview
                 GraphCanvasControl.RenderGraph(_viewModel.CurrentGraph);
+            }
+        }
+
+        private void CopyNodeId_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel?.SelectedNode != null)
+            {
+                try
+                {
+                    string nodeIdentifier = GetNodeIdentifier(_viewModel.SelectedNode);
+                    Clipboard.SetText(nodeIdentifier);
+                    _viewModel.StatusMessage = "Node Identifier copied to clipboard!";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to copy Node Identifier: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generates node identifier in format: NodeName-NodeID (spaces removed from name)
+        /// </summary>
+        private string GetNodeIdentifier(Node node)
+        {
+            string sanitizedName = node.Name.Replace(" ", "-");
+            return $"{sanitizedName}-{node.Id}";
+        }
+
+        /// <summary>
+        /// Updates the Node Identifier display textbox
+        /// </summary>
+        private void UpdateNodeIdentifierDisplay()
+        {
+            if (NodeIdTextBox != null && _viewModel?.SelectedNode != null)
+            {
+                NodeIdTextBox.Text = GetNodeIdentifier(_viewModel.SelectedNode);
+            }
+            else if (NodeIdTextBox != null)
+            {
+                NodeIdTextBox.Text = string.Empty;
             }
         }
 
@@ -1422,6 +1468,14 @@ namespace GraphSimulator
                 ? Visibility.Visible 
                 : Visibility.Collapsed;
 
+            // Show DateJson panel only when ValueSource is "date-json"
+            if (DateJsonPanel != null)
+            {
+                DateJsonPanel.Visibility = _viewModel.SelectedNodeEdit.ValueSource == "date-json"
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+
             // Setup DateMapEditor text changed handler
             if (DateMapEditor != null && _viewModel.SelectedNodeEdit.ValueSource == "date-map")
             {
@@ -1431,6 +1485,21 @@ namespace GraphSimulator
                 DateMapEditor.TextChanged += DateMapEditor_TextChanged;
                 // Set initial text
                 DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
+            }
+        }
+
+        private void BrowseDateJsonFile_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                Title = "Select Date-Based JSON File"
+            };
+
+            if (dialog.ShowDialog() == true && _viewModel?.SelectedNodeEdit != null)
+            {
+                _viewModel.SelectedNodeEdit.DateJsonFilePath = dialog.FileName;
+                _viewModel.StatusMessage = $"Selected: {System.IO.Path.GetFileName(dialog.FileName)}";
             }
         }
 
