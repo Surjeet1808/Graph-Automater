@@ -1,0 +1,13 @@
+[
+  {
+    "date": "2025-12-26",
+    "Click-Button-abc123...": {
+      "IntValues": [100, 200],
+      "name": "Christmas click",
+      "purpose": "Click the gift button"
+    },
+    "Type-Text-def456...": {
+      "StringValues": ["Merry Christmas!"]
+    }
+  }
+]
