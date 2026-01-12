@@ -271,11 +271,20 @@ namespace GraphSimulator
                         {
                             JsonEditor.Text = _viewModel.SelectedNodeEdit?.JsonData ?? string.Empty;
                         }
+                        // Update DateMap editor
+                        if (DateMapEditor != null && _viewModel.SelectedNodeEdit != null)
+                        {
+                            DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
+                        }
+                        // Update Node Identifier display
+                        UpdateNodeIdentifierDisplay();
                         // Subscribe to SelectedNodeEdit changes for live preview
                         SubscribeToNodeEditPreview(_viewModel.SelectedNodeEdit);
                         // Pass staging model and selected node id to canvas for live preview rendering
                         GraphCanvasControl.SelectedNodeEditModel = _viewModel.SelectedNodeEdit;
                         GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
+                        // Update DateMap panel visibility
+                        UpdateDateMapPanelVisibility();
                     }
                 };
 
@@ -751,6 +760,9 @@ namespace GraphSimulator
                             {
                                 // Set priority based on traversal order
                                 operation.Priority = priority++;
+                                // Store node information for date-json value source
+                                operation.NodeName = currentNode.Name;
+                                operation.NodeId = currentNode.Id;
                                 operations.Add(operation);
                             }
                         }
@@ -1041,15 +1053,29 @@ namespace GraphSimulator
                 // Also update the canvas since type change affects color
                 GraphCanvasControl.SelectedNodeEditModel = _viewModel.SelectedNodeEdit;
                 GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
-                GraphCanvasControl.RenderGraph(_viewModel.CurrentGraph);
+            }
+
+            // Update DateMap panel visibility when ValueSource changes
+            if (e.PropertyName == nameof(NodeEditModel.ValueSource))
+            {
+                UpdateDateMapPanelVisibility();
+            }
+
+            // Sync DateMapEditor text back to model when it changes
+            if (e.PropertyName == nameof(NodeEditModel.DateMapJson) && sender is NodeEditModel model)
+            {
+                if (DateMapEditor != null && DateMapEditor.Text != model.DateMapJson)
+                {
+                    DateMapEditor.Text = model.DateMapJson ?? "{}";
+                }
             }
 
             // Update JSON editor when JsonData changes
-            if (e.PropertyName == nameof(NodeEditModel.JsonData) && sender is NodeEditModel model)
+            if (e.PropertyName == nameof(NodeEditModel.JsonData) && sender is NodeEditModel jsonModel)
             {
-                if (JsonEditor != null && JsonEditor.Text != model.JsonData)
+                if (JsonEditor != null && JsonEditor.Text != jsonModel.JsonData)
                 {
-                    JsonEditor.Text = model.JsonData;
+                    JsonEditor.Text = jsonModel.JsonData;
                 }
             }
 
@@ -1063,6 +1089,47 @@ namespace GraphSimulator
                 GraphCanvasControl.SelectedNodeId = _viewModel.SelectedNode?.Id;
                 // Re-render to show preview
                 GraphCanvasControl.RenderGraph(_viewModel.CurrentGraph);
+            }
+        }
+
+        private void CopyNodeId_Click(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel?.SelectedNode != null)
+            {
+                try
+                {
+                    string nodeIdentifier = GetNodeIdentifier(_viewModel.SelectedNode);
+                    Clipboard.SetText(nodeIdentifier);
+                    _viewModel.StatusMessage = "Node Identifier copied to clipboard!";
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to copy Node Identifier: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generates node identifier in format: NodeName-NodeID (spaces removed from name)
+        /// </summary>
+        private string GetNodeIdentifier(Node node)
+        {
+            string sanitizedName = node.Name.Replace(" ", "-");
+            return $"{sanitizedName}-{node.Id}";
+        }
+
+        /// <summary>
+        /// Updates the Node Identifier display textbox
+        /// </summary>
+        private void UpdateNodeIdentifierDisplay()
+        {
+            if (NodeIdTextBox != null && _viewModel?.SelectedNode != null)
+            {
+                NodeIdTextBox.Text = GetNodeIdentifier(_viewModel.SelectedNode);
+            }
+            else if (NodeIdTextBox != null)
+            {
+                NodeIdTextBox.Text = string.Empty;
             }
         }
 
@@ -1390,6 +1457,59 @@ namespace GraphSimulator
                 MessageBox.Show($"Error saving executable graph: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-       
+
+        private void UpdateDateMapPanelVisibility()
+        {
+            if (DateMapPanel == null || _viewModel?.SelectedNodeEdit == null)
+                return;
+
+            // Show DateMap panel only when ValueSource is "date-map"
+            DateMapPanel.Visibility = _viewModel.SelectedNodeEdit.ValueSource == "date-map" 
+                ? Visibility.Visible 
+                : Visibility.Collapsed;
+
+            // Show DateJson panel only when ValueSource is "date-json"
+            if (DateJsonPanel != null)
+            {
+                DateJsonPanel.Visibility = _viewModel.SelectedNodeEdit.ValueSource == "date-json"
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+
+            // Setup DateMapEditor text changed handler
+            if (DateMapEditor != null && _viewModel.SelectedNodeEdit.ValueSource == "date-map")
+            {
+                // Remove old handler to avoid duplicates
+                DateMapEditor.TextChanged -= DateMapEditor_TextChanged;
+                // Add new handler
+                DateMapEditor.TextChanged += DateMapEditor_TextChanged;
+                // Set initial text
+                DateMapEditor.Text = _viewModel.SelectedNodeEdit.DateMapJson ?? "{}";
+            }
+        }
+
+        private void BrowseDateJsonFile_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                Title = "Select Date-Based JSON File"
+            };
+
+            if (dialog.ShowDialog() == true && _viewModel?.SelectedNodeEdit != null)
+            {
+                _viewModel.SelectedNodeEdit.DateJsonFilePath = dialog.FileName;
+                _viewModel.StatusMessage = $"Selected: {System.IO.Path.GetFileName(dialog.FileName)}";
+            }
+        }
+
+        private void DateMapEditor_TextChanged(object? sender, EventArgs e)
+        {
+            if (_viewModel?.SelectedNodeEdit != null && DateMapEditor != null)
+            {
+                // Update the model with the new DateMap JSON
+                _viewModel.SelectedNodeEdit.DateMapJson = DateMapEditor.Text;
+            }
+        }
     }
 }

@@ -276,69 +276,80 @@ namespace GraphSimulator.Execution.Controller
         /// </summary>
         private async Task ExecuteSingleOperationAsync(OperationModel operation)
         {
+            // Generate node identifier for date-json value source
+            string? nodeIdentifier = null;
+            if (operation.NodeName != null && operation.NodeId != null)
+            {
+                string sanitizedName = operation.NodeName.Replace(" ", "-");
+                nodeIdentifier = $"{sanitizedName}-{operation.NodeId}";
+            }
+
+            // Resolve values from ValueSource
+            var resolvedValues = GraphSimulator.Execution.Services.ValueSourceService.ResolveValues(operation, nodeIdentifier);
+
             // Execute based on type
             try
             {
                 switch (operation.Type.ToLower())
                 {
                     case "mouse_left_click":
-                        ValidateIntValues(operation, 2, "mouse_left_click requires x and y coordinates");
-                        WpfInputHelper.ClickAt(operation.IntValues[0], operation.IntValues[1]);
+                        ValidateIntValues(resolvedValues.IntValues, 2, "mouse_left_click requires x and y coordinates");
+                        WpfInputHelper.ClickAt(resolvedValues.IntValues[0], resolvedValues.IntValues[1]);
                         break;
 
                     case "mouse_right_click":
-                        ValidateIntValues(operation, 2, "mouse_right_click requires x and y coordinates");
-                        WpfInputHelper.RightClickAt(operation.IntValues[0], operation.IntValues[1]);
+                        ValidateIntValues(resolvedValues.IntValues, 2, "mouse_right_click requires x and y coordinates");
+                        WpfInputHelper.RightClickAt(resolvedValues.IntValues[0], resolvedValues.IntValues[1]);
                         break;
 
                     case "mouse_move":
-                        ValidateIntValues(operation, 2, "mouse_move requires x and y coordinates");
-                        WpfInputHelper.MoveTo(operation.IntValues[0], operation.IntValues[1]);
+                        ValidateIntValues(resolvedValues.IntValues, 2, "mouse_move requires x and y coordinates");
+                        WpfInputHelper.MoveTo(resolvedValues.IntValues[0], resolvedValues.IntValues[1]);
                         break;
 
                     case "scroll_up":
-                        int upAmount = operation.IntValues.Length > 0 ? operation.IntValues[0] : 120;
+                        int upAmount = resolvedValues.IntValues.Length > 0 ? resolvedValues.IntValues[0] : 120;
                         WpfInputHelper.Scroll(upAmount);
                         break;
 
                     case "scroll_down":
-                        int downAmount = operation.IntValues.Length > 0 ? operation.IntValues[0] : 120;
+                        int downAmount = resolvedValues.IntValues.Length > 0 ? resolvedValues.IntValues[0] : 120;
                         WpfInputHelper.Scroll(-downAmount);
                         break;
 
                     case "scroll_left":
-                        int leftAmount = operation.IntValues.Length > 0 ? operation.IntValues[0] : 120;
+                        int leftAmount = resolvedValues.IntValues.Length > 0 ? resolvedValues.IntValues[0] : 120;
                         WpfInputHelper.ScrollHorizontal(-leftAmount);
                         break;
 
                     case "scroll_right":
-                        int rightAmount = operation.IntValues.Length > 0 ? operation.IntValues[0] : 120;
+                        int rightAmount = resolvedValues.IntValues.Length > 0 ? resolvedValues.IntValues[0] : 120;
                         WpfInputHelper.ScrollHorizontal(rightAmount);
                         break;
 
                     case "key_press":
-                        ValidateIntValues(operation, 1, "key_press requires a key code");
-                        WpfInputHelper.PressKey((byte)operation.IntValues[0]);
+                        ValidateIntValues(resolvedValues.IntValues, 1, "key_press requires a key code");
+                        WpfInputHelper.PressKey((byte)resolvedValues.IntValues[0]);
                         break;
 
                     case "key_down":
-                        ValidateIntValues(operation, 1, "key_down requires a key code");
-                        WpfInputHelper.KeyDown((byte)operation.IntValues[0]);
+                        ValidateIntValues(resolvedValues.IntValues, 1, "key_down requires a key code");
+                        WpfInputHelper.KeyDown((byte)resolvedValues.IntValues[0]);
                         break;
 
                     case "key_up":
-                        ValidateIntValues(operation, 1, "key_up requires a key code");
-                        WpfInputHelper.KeyUp((byte)operation.IntValues[0]);
+                        ValidateIntValues(resolvedValues.IntValues, 1, "key_up requires a key code");
+                        WpfInputHelper.KeyUp((byte)resolvedValues.IntValues[0]);
                         break;
 
                     case "type_text":
-                        ValidateStringValues(operation, 1, "type_text requires text to type");
-                        WpfInputHelper.TypeText(operation.StringValues[0]);
+                        ValidateStringValues(resolvedValues.StringValues, 1, "type_text requires text to type");
+                        WpfInputHelper.TypeText(resolvedValues.StringValues[0]);
                         break;
 
                     case "wait":
-                        ValidateIntValues(operation, 1, "wait requires duration in milliseconds");
-                        await Task.Delay(operation.IntValues[0]);
+                        ValidateIntValues(resolvedValues.IntValues, 1, "wait requires duration in milliseconds");
+                        await Task.Delay(resolvedValues.IntValues[0]);
                         break;
 
                     case "graph":
@@ -515,17 +526,17 @@ namespace GraphSimulator.Execution.Controller
             await ExecuteOperationsAsync(operations.ToArray());
         }
 
-        private void ValidateIntValues(OperationModel operation, int minCount, string errorMessage)
+        private void ValidateIntValues(int[] intValues, int minCount, string errorMessage)
         {
-            if (operation.IntValues == null || operation.IntValues.Length < minCount)
+            if (intValues == null || intValues.Length < minCount)
             {
                 throw new ArgumentException(errorMessage);
             }
         }
 
-        private void ValidateStringValues(OperationModel operation, int minCount, string errorMessage)
+        private void ValidateStringValues(string[] stringValues, int minCount, string errorMessage)
         {
-            if (operation.StringValues == null || operation.StringValues.Length < minCount)
+            if (stringValues == null || stringValues.Length < minCount)
             {
                 throw new ArgumentException(errorMessage);
             }
